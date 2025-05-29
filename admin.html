@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -5,40 +6,6 @@
   <title>Painel de Administração</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f1f1f1;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    ul {
-      list-style: none;
-      padding-left: 0;
-    }
-    li {
-      background: white;
-      padding: 10px;
-      margin-bottom: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    button {
-      padding: 5px 10px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 4px;
-      background-color: #3b82f6;
-      color: white;
-      cursor: pointer;
-    }
-    button.devolver {
-      background-color: #10b981;
-      margin-left: 10px;
-    }
-  </style>
 </head>
 <body>
   <h1>Painel de Administração</h1>
@@ -63,13 +30,15 @@
 
       Object.entries(solicitacoes).forEach(([key, sol]) => {
         const li = document.createElement("li");
+        const itensHtml = (sol.itens || []).map(i => `<li>${i.item} (${i.quantidade})</li>`).join("");
+
         li.innerHTML = `
           <strong>#${sol.numero}</strong><br />
           Solicitante: ${sol.solicitante}<br />
           Departamento: ${sol.departamento}<br />
           Data: ${sol.data}<br />
-          Itens: <ul>${sol.itens.map(i => `<li>${i.item} (${i.quantidade})</li>`).join("")}</ul>
-          <button class="devolver" onclick="devolverSolicitacao('${key}', ${JSON.stringify(sol.itens).replace(/"/g, '&quot;')})">Registrar Devolução</button>
+          Itens: <ul>${itensHtml}</ul>
+          <button onclick="devolverSolicitacao('${key}', ${JSON.stringify(sol.itens || []).replace(/"/g, '&quot;')})">Registrar Devolução</button>
         `;
         listaSolicitacoesAdmin.appendChild(li);
       });
@@ -78,13 +47,11 @@
     function devolverSolicitacao(solicitacaoKey, itens) {
       if (!confirm("Confirmar devolução desta solicitação? Os itens retornarão ao estoque.")) return;
 
-      // Atualiza o estoque somando de volta os itens
       itens.forEach(({ item, quantidade }) => {
         const itemRef = estoqueRef.child(item);
         itemRef.transaction(current => (current || 0) + quantidade);
       });
 
-      // Remove a solicitação
       database.ref(`solicitacoes/${solicitacaoKey}`).remove();
 
       alert("Devolução registrada e estoque atualizado.");
