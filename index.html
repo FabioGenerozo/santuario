@@ -257,7 +257,7 @@
       });
     }
 
-    btnFinalizar.addEventListener("click", () => {
+    btnFinalizar.addEventListener("click", async () => {
       if (itensSolicitados.length === 0) {
         alert("Adicione pelo menos um item na solicitação.");
         return;
@@ -268,53 +268,91 @@
       const retirada = localStorage.getItem("dataRetirada");
       const devolucao = localStorage.getItem("dataDevolucao");
 
-      const novaSolicitacao = {
-        nome,
-        departamento,
-        dataRetirada: retirada,
-        dataDevolucao: devolucao,
-        itens: itensSolicitados,
-        timestamp: Date.now()
-      };
-
-      // Atualiza estoque no Firebase subtraindo os itens solicitados
-      const updates = {};
-      itensSolicitados.forEach(({ item, quantidade }) => {
-        const estoqueAtualItem = estoqueAtual[item] || 0;
-        updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
-      });
-
-      const solicitacaoKey = solicitacoesRef.push().key;
-
-      updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
-
-      database.ref().update(updates)
-        .then(() => {
-          mensagemSucesso.textContent = "Solicitação finalizada com sucesso!";
-          itensSolicitados = [];
-          atualizarListaTemporaria();
-          carregarSolicitacoes();
-        })
-        .catch((error) => {
-          alert("Erro ao finalizar solicitação: " + error.message);
+      try {
+        // Busca último número de solicitação
+        const snapshot = await solicitacoesRef.orderByChild("timestamp").limitToLast(1).once("value");
+        let ultimoNumero = 0;
+        snapshot.forEach(child => {
+          const num = parseInt(child.val().numero);
+          if (!isNaN(num)) ultimoNumero = num;
         });
+        const novoNumero = String(ultimoNumero + 1).padStart(4, "0");
+
+        const dataHora = new Date().toLocaleString("pt-BR");
+
+        const novaSolicitacao = {
+          numero: novoNumero,
+          solicitante: nome,
+          departamento: departamento,
+          dataRetirada: retirada,
+          dataDevolucao: devolucao,
+          data: dataHora,
+          itens: itensSolicitados,
+          timestamp: Date.now()
+        };
+
+        // Atualiza estoque no Firebase
+        const updates = {};
+        itensSolicitados.forEach(({ item, quantidade }) => {
+          const estoqueAtualItem = estoqueAtual[item] || 0;
+          updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+        });
+
+        const solicitacaoKey = solicitacoesRef.push().key;
+        updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
+
+        await database.ref().update(updates);
+
+        mensagemSucesso.textContent = "Solicitação finalizada com sucesso!";
+        gerarPDF(novaSolicitacao);
+
+        itensSolicitados = [];
+        atualizarListaTemporaria();
+        carregarSolicitacoes();
+
+      } catch (error) {
+        alert("Erro ao finalizar solicitação: " + error.message);
+      }
     });
 
     function carregarSolicitacoes() {
-      solicitacoesRef.once("value", (snapshot) => {
-        const solicitacoes = snapshot.val() || {};
-        listaSolicitacoes.innerHTML = "";
-
-        Object.entries(solicitacoes).forEach(([key, solic]) => {
+      listaSolicitacoes.innerHTML = "";
+      solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
+        snapshot.forEach((child) => {
+          const s = child.val();
           const li = document.createElement("li");
-          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
-          li.textContent = `${solic.nome} - ${solic.departamento} - Retirada: ${solic.dataRetirada} - Devolução: ${solic.dataDevolucao} - Itens: ${itensTexto}`;
+          li.innerHTML = `<strong>#${s.numero}</strong> - ${s.solicitante} (${s.departamento}) - ${s.data}<br>
+            Retirada: ${s.dataRetirada}, Devolução: ${s.dataDevolucao}<br>
+            Itens:<br> ${s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")}`;
           listaSolicitacoes.appendChild(li);
         });
       });
     }
 
     carregarSolicitacoes();
+
+    function gerarPDF(solicitacao) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text("Solicitação de Itens", 15, 15);
+
+      doc.setFontSize(11);
+      doc.text(`Nº Solicitação: ${solicitacao.numero}`, 15, 30);
+      doc.text(`Solicitante: ${solicitacao.solicitante}`, 15, 40);
+      doc.text(`Departamento: ${solicitacao.departamento}`, 15, 50);
+      doc.text(`Data Retirada: ${solicitacao.dataRetirada}`, 15, 60);
+      doc.text(`Data Devolução: ${solicitacao.dataDevolucao}`, 15, 70);
+      doc.text(`Data da Solicitação: ${solicitacao.data}`, 15, 80);
+
+      doc.text("Itens:", 15, 95);
+      solicitacao.itens.forEach((i, idx) => {
+        doc.text(`- ${i.item} (${i.quantidade})`, 20, 105 + idx * 10);
+      });
+
+      doc.save(`solicitacao_${solicitacao.numero}.pdf`);
+    }
   </script>
 </body>
 </html>
