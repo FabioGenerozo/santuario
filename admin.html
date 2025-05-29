@@ -3,212 +3,215 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Administração - PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
+  <title>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #e8f0fe;
+      color: #2c3e50;
       padding: 20px;
-      background: #f5f5f5;
-    }
-    #content {
-      display: none; /* Oculto até validar senha */
+      margin: 0;
+      min-height: 100vh;
     }
     header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    header img {
-      width: 50px;
-      height: 50px;
-      object-fit: contain;
+      margin-bottom: 25px;
+      text-align: center;
+      border-bottom: 2px solid #a8c0ff;
+      padding-bottom: 15px;
     }
     header h1 {
-      font-size: 1.5em;
+      font-size: 1.8em;
+      font-weight: 600;
       margin: 0;
-      color: #333;
+      color: #34495e;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    h2 {
+      color: #5a79d6;
+      font-weight: 700;
+      margin-top: 30px;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
+    ul {
+      list-style: none;
+      padding-left: 0;
+      max-width: 700px;
+      margin-top: 15px;
     }
-    th {
-      background-color: #eee;
+    li {
+      background: #f4f8ff;
+      border: 1px solid #a8c0ff;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      padding: 12px 16px;
+      font-size: 1em;
+      color: #34495e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .info {
+      flex: 1 1 400px;
+      min-width: 300px;
     }
     button {
-      padding: 5px 10px;
-      background-color: #ef4444;
+      background-color: #5a79d6;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-weight: 600;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+    button:hover {
+      background-color: #3d59b3;
     }
     #btnVoltar {
-      margin-bottom: 15px;
-      background-color: #2563eb;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #34495e;
+      border-radius: 6px;
+    }
+    #btnVoltar:hover {
+      background-color: #2a3b4f;
+    }
+    #msgSucesso, #msgErro {
+      margin-top: 20px;
+      font-weight: 600;
+      max-width: 700px;
+    }
+    #msgSucesso {
+      color: #27ae60;
+    }
+    #msgErro {
+      color: #c0392b;
     }
   </style>
 </head>
 <body>
+  <header>
+    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</h1>
+  </header>
 
-  <div id="content">
-    <header>
-      <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo do Patrimônio" />
-      <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</h1>
-    </header>
+  <h2>Solicitações Pendentes</h2>
+  <ul id="listaPendentes">
+    <!-- Itens carregados aqui -->
+  </ul>
 
-    <button id="btnVoltar">← Voltar para Início</button>
+  <button id="btnVoltar">Voltar para Solicitações</button>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Nº Solicitação</th>
-          <th>Nome</th>
-          <th>Departamento</th>
-          <th>Data Retirada</th>
-          <th>Data Devolução</th>
-          <th>Itens</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaSolicitacoesCorpo"></tbody>
-    </table>
-  </div>
+  <p id="msgSucesso"></p>
+  <p id="msgErro"></p>
 
   <script>
-    const senhaCorreta = "tcv261016"; // <-- Defina aqui sua senha segura!
+    const firebaseConfig = {
+      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-    function pedirSenha() {
-      const senha = prompt("Por favor, insira a senha para acessar a administração:");
-      if (senha === senhaCorreta) {
-        document.getElementById("content").style.display = "block";
-        iniciarFirebase();
-      } else {
-        alert("Senha incorreta! Acesso negado.");
-        document.body.innerHTML = "<h2>Acesso negado.</h2>";
-      }
-    }
+    const solicitacoesRef = database.ref("solicitacoes");
+    const estoqueRef = database.ref("estoque");
 
-    function iniciarFirebase() {
-      const firebaseConfig = {
-        databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
-      };
-      firebase.initializeApp(firebaseConfig);
-      const database = firebase.database();
+    const listaPendentes = document.getElementById("listaPendentes");
+    const msgSucesso = document.getElementById("msgSucesso");
+    const msgErro = document.getElementById("msgErro");
+    const btnVoltar = document.getElementById("btnVoltar");
 
-      const solicitacoesRef = database.ref("solicitacoes");
-      const estoqueRef = database.ref("estoque");
+    btnVoltar.addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
 
-      const tabelaCorpo = document.getElementById("tabelaSolicitacoesCorpo");
-      const btnVoltar = document.getElementById("btnVoltar");
-
-      btnVoltar.addEventListener("click", () => {
-        window.location.href = "index.html";
-      });
-
-      function carregarSolicitacoes() {
-        tabelaCorpo.innerHTML = "";
-        solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
-          const data = snapshot.val();
-          if (!data) return;
-
-          const ord = Object.values(data).sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
-
-          ord.forEach((sol) => {
-            const tr = document.createElement("tr");
-
-            const tdNumero = document.createElement("td");
-            tdNumero.textContent = sol.numero;
-            tr.appendChild(tdNumero);
-
-            const tdNome = document.createElement("td");
-            tdNome.textContent = sol.nome;
-            tr.appendChild(tdNome);
-
-            const tdDepto = document.createElement("td");
-            tdDepto.textContent = sol.departamento;
-            tr.appendChild(tdDepto);
-
-            const tdRetirada = document.createElement("td");
-            tdRetirada.textContent = sol.dataRetirada;
-            tr.appendChild(tdRetirada);
-
-            const tdDevolucao = document.createElement("td");
-            tdDevolucao.textContent = sol.dataDevolucao;
-            tr.appendChild(tdDevolucao);
-
-            const tdItens = document.createElement("td");
-            tdItens.innerHTML = sol.itens.map(i => `${i.item} (x${i.quantidade})`).join("<br>");
-            tr.appendChild(tdItens);
-
-            const tdAcao = document.createElement("td");
-            const btnDevolver = document.createElement("button");
-            btnDevolver.textContent = "Marcar Devolvido";
-            btnDevolver.addEventListener("click", () => {
-              confirmarDevolucao(sol);
-            });
-            tdAcao.appendChild(btnDevolver);
-            tr.appendChild(tdAcao);
-
-            tabelaCorpo.appendChild(tr);
-          });
-        });
-      }
-
-      function confirmarDevolucao(solicitacao) {
-        if (!confirm(`Confirmar devolução da solicitação Nº ${solicitacao.numero}?`)) {
-          return;
-        }
-
-        solicitacoesRef.orderByChild("numero").equalTo(solicitacao.numero).once("value", snapshot => {
+    // Busca e mostra todas solicitações pendentes
+    function carregarPendentes() {
+      msgSucesso.textContent = "";
+      msgErro.textContent = "";
+      listaPendentes.innerHTML = "Carregando...";
+      solicitacoesRef.once("value")
+        .then(snapshot => {
           const dados = snapshot.val();
+          listaPendentes.innerHTML = "";
           if (!dados) {
-            alert("Solicitação não encontrada.");
+            listaPendentes.innerHTML = "<li>Nenhuma solicitação pendente encontrada.</li>";
             return;
           }
-          const key = Object.keys(dados)[0];
+          let pendentesEncontrados = false;
+          Object.entries(dados).forEach(([key, sol]) => {
+            if (sol.status === "pendente") {
+              pendentesEncontrados = true;
+              const li = document.createElement("li");
+              const itensTxt = sol.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
 
-          const updates = {};
-          let promises = [];
+              const infoDiv = document.createElement("div");
+              infoDiv.classList.add("info");
+              infoDiv.innerHTML = `
+                <strong>Solicitação nº ${sol.numero}</strong><br/>
+                Usuário: ${sol.usuario} - Departamento: ${sol.departamento}<br/>
+                Retirada: ${sol.dataRetirada} - Devolução: ${sol.dataDevolucao}<br/>
+                Data/Hora: ${sol.dataHoraSolicitacao}<br/>
+                Itens: ${itensTxt}<br/>
+              `;
 
-          solicitacao.itens.forEach(({ item, quantidade }) => {
-            const p = estoqueRef.child(item).once("value").then(snap => {
-              const atual = snap.val() || 0;
-              updates[`estoque/${item}`] = atual + quantidade;
-            });
-            promises.push(p);
+              const btnDevolver = document.createElement("button");
+              btnDevolver.textContent = "Registrar Devolução";
+
+              btnDevolver.addEventListener("click", () => {
+                registrarDevolucao(key, sol);
+              });
+
+              li.appendChild(infoDiv);
+              li.appendChild(btnDevolver);
+              listaPendentes.appendChild(li);
+            }
           });
-
-          Promise.all(promises)
-            .then(() => {
-              return database.ref().update(updates);
-            })
-            .then(() => {
-              return solicitacoesRef.child(key).remove();
-            })
-            .then(() => {
-              alert(`Solicitação Nº ${solicitacao.numero} devolvida com sucesso!`);
-              carregarSolicitacoes();
-            })
-            .catch(err => {
-              alert("Erro ao processar devolução: " + err.message);
-            });
+          if (!pendentesEncontrados) {
+            listaPendentes.innerHTML = "<li>Nenhuma solicitação pendente encontrada.</li>";
+          }
+        })
+        .catch(() => {
+          listaPendentes.innerHTML = "<li>Erro ao carregar solicitações.</li>";
         });
-      }
-
-      carregarSolicitacoes();
     }
 
-    pedirSenha();
+    // Função para registrar devolução
+    function registrarDevolucao(chave, solicitacao) {
+      msgSucesso.textContent = "";
+      msgErro.textContent = "";
+
+      // Atualizar status da solicitação para "devolvido"
+      solicitacoesRef.child(chave).update({ status: "devolvido" })
+        .then(() => {
+          // Atualizar o estoque somando os itens devolvidos
+          estoqueRef.once("value").then(snapshot => {
+            const estoqueAtual = snapshot.val() || {};
+            const atualizacoesEstoque = {};
+
+            solicitacao.itens.forEach(({ item, quantidade }) => {
+              const estoqueAtualItem = estoqueAtual[item] || 0;
+              atualizacoesEstoque[item] = estoqueAtualItem + quantidade;
+            });
+
+            estoqueRef.update(atualizacoesEstoque)
+              .then(() => {
+                msgSucesso.textContent = `Solicitação nº ${solicitacao.numero} devolvida e estoque atualizado.`;
+                carregarPendentes();
+              })
+              .catch(() => {
+                msgErro.textContent = "Erro ao atualizar o estoque.";
+              });
+          });
+        })
+        .catch(() => {
+          msgErro.textContent = "Erro ao atualizar o status da solicitação.";
+        });
+    }
+
+    carregarPendentes();
   </script>
 </body>
 </html>
