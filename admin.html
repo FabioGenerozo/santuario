@@ -1,17 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Painel de Administração</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Administração de Solicitações</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f1f1f1;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    li {
+      background: #fff;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 8px;
+      padding: 6px 12px;
+      font-size: 0.95em;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-devolver {
+      background-color: #10b981;
+      color: white;
+    }
+    .btn-voltar {
+      background-color: #3b82f6;
+      color: white;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Painel de Administração</h1>
-  <button onclick="window.location.href='index.html'">← Voltar para a Página Inicial</button>
-  <h2>Solicitações Registradas</h2>
-  <ul id="listaSolicitacoesAdmin"></ul>
+  <button class="btn-voltar" onclick="window.location.href='index.html'">← Voltar para Solicitações</button>
+  <h1>Administração de Solicitações</h1>
+  <ul id="listaAdmin"></ul>
 
   <script>
     const firebaseConfig = {
@@ -19,43 +56,60 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
+    const listaAdmin = document.getElementById("listaAdmin");
 
-    const listaSolicitacoesAdmin = document.getElementById("listaSolicitacoesAdmin");
+    let estoqueAtual = {};
 
-    solicitacoesRef.on("value", (snapshot) => {
-      const solicitacoes = snapshot.val() || {};
-      listaSolicitacoesAdmin.innerHTML = "";
-
-      Object.entries(solicitacoes).forEach(([key, sol]) => {
-        const li = document.createElement("li");
-        const itensHtml = (sol.itens || []).map(i => `<li>${i.item} (${i.quantidade})</li>`).join("");
-
-        li.innerHTML = `
-          <strong>#${sol.numero}</strong><br />
-          Solicitante: ${sol.solicitante}<br />
-          Departamento: ${sol.departamento}<br />
-          Data: ${sol.data}<br />
-          Itens: <ul>${itensHtml}</ul>
-          <button onclick="devolverSolicitacao('${key}', ${JSON.stringify(sol.itens || []).replace(/"/g, '&quot;')})">Registrar Devolução</button>
-        `;
-        listaSolicitacoesAdmin.appendChild(li);
-      });
+    estoqueRef.on("value", (snapshot) => {
+      estoqueAtual = snapshot.val() || {};
     });
 
-    function devolverSolicitacao(solicitacaoKey, itens) {
-      if (!confirm("Confirmar devolução desta solicitação? Os itens retornarão ao estoque.")) return;
+    function carregarSolicitacoes() {
+      solicitacoesRef.once("value", (snapshot) => {
+        const solicitacoes = snapshot.val() || {};
+        listaAdmin.innerHTML = "";
 
+        Object.entries(solicitacoes).forEach(([key, solic]) => {
+          const li = document.createElement("li");
+          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
+
+          li.innerHTML = `
+            <strong>${solic.solicitante}</strong> - ${solic.departamento}<br />
+            Retirada: ${solic.dataRetirada} | Devolução: ${solic.dataDevolucao}<br />
+            Itens: ${itensTexto}<br />
+            <button class="btn-devolver" onclick="devolverItens('${key}', ${JSON.stringify(solic.itens).replace(/"/g, '&quot;')})">Registrar Devolução</button>
+          `;
+
+          listaAdmin.appendChild(li);
+        });
+      });
+    }
+
+    function devolverItens(chave, itens) {
+      if (!confirm("Confirmar devolução e reposição dos itens ao estoque?")) return;
+
+      const updates = {};
       itens.forEach(({ item, quantidade }) => {
-        const itemRef = estoqueRef.child(item);
-        itemRef.transaction(current => (current || 0) + quantidade);
+        const atual = estoqueAtual[item] || 0;
+        updates[`estoque/${item}`] = atual + quantidade;
       });
 
-      database.ref(`solicitacoes/${solicitacaoKey}`).remove();
+      updates[`solicitacoes/${chave}`] = null;
 
-      alert("Devolução registrada e estoque atualizado.");
+      database.ref().update(updates)
+        .then(() => {
+          alert("Itens devolvidos e estoque atualizado.");
+          carregarSolicitacoes();
+        })
+        .catch((error) => {
+          alert("Erro ao devolver itens: " + error.message);
+        });
     }
+
+    carregarSolicitacoes();
   </script>
 </body>
 </html>
