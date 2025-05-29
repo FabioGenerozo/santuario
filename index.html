@@ -404,37 +404,7 @@
       }).catch(() => alert("Erro ao obter contador de solicitações."));
     });
 
-    function carregarSolicitacoes() {
-      listaSolicitacoes.innerHTML = "";
-      solicitacoesRef.once("value").then(snapshot => {
-        const dados = snapshot.val();
-        if (!dados) return;
-
-        Object.values(dados).forEach(solicitacao => {
-          const li = document.createElement("li");
-          li.style.marginBottom = "10px";
-          li.style.padding = "10px";
-          li.style.backgroundColor = "#f0f5ff";
-          li.style.borderRadius = "6px";
-          li.style.border = "1px solid #a8c0ff";
-
-          let itensTxt = solicitacao.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
-
-          li.innerHTML = `
-            <strong>Solicitação nº ${solicitacao.numero}</strong><br/>
-            Usuário: ${solicitacao.usuario} - Departamento: ${solicitacao.departamento}<br/>
-            Retirada: ${solicitacao.dataRetirada} - Devolução: ${solicitacao.dataDevolucao}<br/>
-            Data/Hora: ${solicitacao.dataHoraSolicitacao}<br/>
-            Itens: ${itensTxt}<br/>
-            Status: ${solicitacao.status}
-          `;
-
-          listaSolicitacoes.appendChild(li);
-        });
-      });
-    }
-
-    carregarSolicitacoes();
+  
   </script>
 </body>
 </html>
