@@ -2,122 +2,439 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: #e8f0fe; /* azul claro suave */
+      color: #2c3e50; /* azul escuro suave */
+      min-height: 100vh;
+      margin: 0;
+    }
+    header {
+      margin-bottom: 25px;
+      text-align: center;
+      border-bottom: 2px solid #a8c0ff;
+      padding-bottom: 15px;
+    }
+    header h1 {
+      font-size: 1.8em;
+      margin: 0;
+      font-weight: 600;
+      color: #34495e;
+    }
+    input, button, select {
+      margin: 6px 0;
+      padding: 10px 12px;
+      font-size: 1em;
+      border: 1.8px solid #a8c0ff;
+      border-radius: 6px;
+      background-color: #f9fbff;
+      color: #34495e;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    input:focus, button:hover, select:focus {
+      border-color: #5a79d6;
+      box-shadow: 0 0 6px #7f9cff88;
+      outline: none;
+      cursor: pointer;
+    }
+    button {
+      background-color: #5a79d6;
+      color: white;
+      font-weight: 600;
+      border: none;
+      width: auto;
+      min-width: 120px;
+      cursor: pointer;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    button.remove-btn {
+      background: #d66a5a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-left: 12px;
+      transition: background-color 0.3s ease;
+    }
+    button.remove-btn:hover {
+      background-color: #b04e42;
+    }
+    form {
+      margin-bottom: 15px;
+      max-width: 350px;
+    }
+    ul {
+      list-style: none;
+      padding-left: 0;
+      max-width: 450px;
+      margin-top: 10px;
+      background: #f4f8ff;
+      border: 1px solid #a8c0ff;
+      border-radius: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    li {
+      padding: 10px 14px;
+      border-bottom: 1px solid #dbe7ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 1em;
+      color: #34495e;
+    }
+    li:last-child {
+      border-bottom: none;
+    }
+    h2, h3 {
+      margin-top: 30px;
+      color: #5a79d6;
+      font-weight: 700;
+    }
+    label {
+      margin-top: 12px;
+      display: block;
+      font-weight: 600;
+      color: #4868b1;
+    }
+    #solicitacaoSection > div {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    #solicitacaoSection > div > div {
+      flex: 1;
+      min-width: 280px;
+    }
+    #mensagemSucesso {
+      font-weight: 600;
+      margin-top: 15px;
+      color: #2ecc71;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
+  </header>
 
-<h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
+  <div id="userInfoSection">
+    <form id="userInfoForm">
+      <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
+      <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
+      <label for="dataRetirada">Data de Retirada:</label>
+      <input type="date" id="dataRetirada" required />
+      <label for="dataDevolucao">Data de Devolução:</label>
+      <input type="date" id="dataDevolucao" required />
+      <button type="submit">Continuar</button>
+    </form>
+    <button id="btnAdmin" style="margin-top:10px;">Ir para Tela de Administração</button>
+  </div>
 
-<form id="formSolicitacao">
-  <label>Nome: <input type="text" id="nome" required /></label><br/>
-  <label>Departamento: <input type="text" id="departamento" required /></label><br/>
-  <label>Itens:<br/>
-    <textarea id="itens" placeholder="Formato: item,quantidade (uma linha por item)" required></textarea>
-  </label><br/>
-  <button type="submit">Enviar Solicitação</button>
-</form>
+  <div id="solicitacaoSection" style="display:none;">
+    <button id="btnLogout">Sair / Trocar usuário</button>
 
-<script>
-  // Config Firebase (coloque sua config)
-  const firebaseConfig = {
-    databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    <h2>Solicitar Itens</h2>
 
-  const form = document.getElementById('formSolicitacao');
+    <div>
+      <div>
+        <form id="itemForm">
+          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoqueDatalist" autocomplete="off" required />
+          <datalist id="listaEstoqueDatalist"></datalist>
+          <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
+          <button type="submit">Incluir</button>
+        </form>
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+        <h3>Itens da Solicitação</h3>
+        <ul id="itensTemporarios"></ul>
+      </div>
 
-    const nome = document.getElementById('nome').value.trim();
-    const departamento = document.getElementById('departamento').value.trim();
-    const itensRaw = document.getElementById('itens').value.trim();
+      <div>
+        <h3>Itens em Estoque</h3>
+        <ul id="listaEstoqueUL"></ul>
+      </div>
+    </div>
 
-    if (!nome || !departamento || !itensRaw) {
-      alert("Preencha todos os campos!");
-      return;
+    <button id="btnFinalizar" style="margin-top: 10px;">Finalizar Solicitação</button>
+    <p id="mensagemSucesso"></p>
+
+    <h2>Solicitações Registradas</h2>
+    <ul id="listaSolicitacoes"></ul>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const solicitacoesRef = database.ref("solicitacoes");
+    const estoqueRef = database.ref("estoque");
+
+    const userInfoSection = document.getElementById("userInfoSection");
+    const userInfoForm = document.getElementById("userInfoForm");
+    const nomeUsuarioInput = document.getElementById("nomeUsuario");
+    const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
+    const dataRetiradaInput = document.getElementById("dataRetirada");
+    const dataDevolucaoInput = document.getElementById("dataDevolucao");
+
+    const solicitacaoSection = document.getElementById("solicitacaoSection");
+    const itemForm = document.getElementById("itemForm");
+    const itemSolicitadoInput = document.getElementById("itemSolicitado");
+    const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
+    const btnFinalizar = document.getElementById("btnFinalizar");
+    const mensagemSucesso = document.getElementById("mensagemSucesso");
+    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
+    const itensTemporarios = document.getElementById("itensTemporarios");
+    const listaEstoqueUL = document.getElementById("listaEstoqueUL");
+    const listaEstoqueDatalist = document.getElementById("listaEstoqueDatalist");
+    const btnLogout = document.getElementById("btnLogout");
+    const btnAdmin = document.getElementById("btnAdmin");
+
+    let itensSolicitados = [];
+    let estoqueAtual = {};
+
+    function mostrarSolicitacaoSection() {
+      userInfoSection.style.display = "none";
+      solicitacaoSection.style.display = "block";
     }
 
-    // Parse itens
-    const itens = itensRaw.split('\n').map(line => {
-      const [item, qtd] = line.split(',');
-      return { item: item.trim(), quantidade: Number(qtd.trim()) };
+    function mostrarUserInfoSection() {
+      userInfoSection.style.display = "block";
+      solicitacaoSection.style.display = "none";
+      mensagemSucesso.textContent = "";
+    }
+
+    window.addEventListener("load", () => {
+      const nome = localStorage.getItem("nomeUsuario");
+      const departamento = localStorage.getItem("departamentoUsuario");
+      const retirada = localStorage.getItem("dataRetirada");
+      const devolucao = localStorage.getItem("dataDevolucao");
+
+      if (nome && departamento && retirada && devolucao) {
+        mostrarSolicitacaoSection();
+      } else {
+        mostrarUserInfoSection();
+      }
     });
 
-    // Buscar próximo número sequencial
-    const numero = await getProximoNumeroSequencial();
+    userInfoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nome = nomeUsuarioInput.value.trim();
+      const departamento = departamentoUsuarioInput.value.trim();
+      const retirada = dataRetiradaInput.value;
+      const devolucao = dataDevolucaoInput.value;
 
-    const dataAgora = new Date().toLocaleDateString();
+      if (!nome || !departamento || !retirada || !devolucao) {
+        alert("Preencha todos os campos.");
+        return;
+      }
 
-    const solicitacao = {
-      numero,
-      nome,
-      departamento,
-      itens,
-      dataSolicitacao: dataAgora
-    };
-
-    // Salvar no Firebase
-    await db.ref('solicitacoes').push(solicitacao);
-
-    // Gerar PDF
-    gerarPdf(solicitacao);
-
-    alert("Solicitação enviada com sucesso!");
-
-    form.reset();
-  });
-
-  async function getProximoNumeroSequencial() {
-    const snapshot = await db.ref('solicitacoes').once('value');
-    const dados = snapshot.val() || {};
-    // Pega o maior número existente
-    const numeros = Object.values(dados).map(s => Number(s.numero));
-    const maxNum = numeros.length ? Math.max(...numeros) : 0;
-    return maxNum + 1;
-  }
-
-  function gerarPdf(solicitacao) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    const margemEsquerda = 15;
-    let y = 20;
-
-    doc.setFontSize(16);
-    doc.text("PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA", margemEsquerda, y);
-
-    y += 15;
-    doc.setFontSize(12);
-    doc.text(`Número da Solicitação: ${solicitacao.numero}`, margemEsquerda, y);
-
-    y += 10;
-    doc.text(`Nome: ${solicitacao.nome}`, margemEsquerda, y);
-
-    y += 10;
-    doc.text(`Departamento: ${solicitacao.departamento}`, margemEsquerda, y);
-
-    y += 10;
-    doc.text(`Data da Solicitação: ${solicitacao.dataSolicitacao}`, margemEsquerda, y);
-
-    y += 15;
-    doc.setFontSize(14);
-    doc.text("Itens da Solicitação:", margemEsquerda, y);
-
-    y += 10;
-    doc.setFontSize(12);
-    solicitacao.itens.forEach(({ item, quantidade }) => {
-      doc.text(`- ${item} (x${quantidade})`, margemEsquerda + 5, y);
-      y += 8;
+      localStorage.setItem("nomeUsuario", nome);
+      localStorage.setItem("departamentoUsuario", departamento);
+      localStorage.setItem("dataRetirada", retirada);
+      localStorage.setItem("dataDevolucao", devolucao);
+      mostrarSolicitacaoSection();
     });
 
-    doc.save(`Solicitacao_${solicitacao.numero}.pdf`);
-  }
-</script>
+    btnLogout.addEventListener("click", () => {
+      localStorage.clear();
+      itensSolicitados = [];
+      atualizarListaTemporaria();
+      mostrarUserInfoSection();
+    });
 
+    btnAdmin.addEventListener("click", () => {
+      window.location.href = "admin.html";
+    });
+
+    estoqueRef.on("value", (snapshot) => {
+      estoqueAtual = snapshot.val() || {};
+      atualizarListaEstoque(estoqueAtual);
+    });
+
+    function atualizarListaEstoque(estoque) {
+      listaEstoqueUL.innerHTML = "";
+      listaEstoqueDatalist.innerHTML = "";
+
+      for (const [item, quantidade] of Object.entries(estoque)) {
+        const li = document.createElement("li");
+        li.textContent = `${item} — Quantidade: ${quantidade}`;
+        listaEstoqueUL.appendChild(li);
+
+        const option = document.createElement("option");
+        option.value = item;
+        listaEstoqueDatalist.appendChild(option);
+      }
+    }
+
+    itemForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const item = itemSolicitadoInput.value.trim();
+      const quantidade = parseInt(quantidadeSolicitadaInput.value, 10);
+
+      if (!item || !quantidade || quantidade < 1) {
+        alert("Informe um item e uma quantidade válida.");
+        return;
+      }
+
+      const estoqueDoItem = estoqueAtual[item];
+      if (estoqueDoItem === undefined) {
+        alert("Item não está no estoque.");
+        return;
+      }
+
+      const jaSolicitado = itensSolicitados.reduce((acc, cur) => {
+        return cur.item === item ? acc + cur.quantidade : acc;
+      }, 0);
+
+      if (quantidade + jaSolicitado > estoqueDoItem) {
+        alert("Quantidade solicitada maior que o estoque disponível.");
+        return;
+      }
+
+      const indiceExistente = itensSolicitados.findIndex(i => i.item === item);
+      if (indiceExistente >= 0) {
+        itensSolicitados[indiceExistente].quantidade += quantidade;
+      } else {
+        itensSolicitados.push({ item, quantidade });
+      }
+
+      atualizarListaTemporaria();
+
+      itemSolicitadoInput.value = "";
+      quantidadeSolicitadaInput.value = "";
+    });
+
+    function atualizarListaTemporaria() {
+      itensTemporarios.innerHTML = "";
+      itensSolicitados.forEach(({ item, quantidade }, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${item} — Quantidade: ${quantidade}`;
+        const btnRemover = document.createElement("button");
+        btnRemover.textContent = "X";
+        btnRemover.classList.add("remove-btn");
+        btnRemover.addEventListener("click", () => {
+          itensSolicitados.splice(index, 1);
+          atualizarListaTemporaria();
+        });
+        li.appendChild(btnRemover);
+        itensTemporarios.appendChild(li);
+      });
+    }
+
+    btnFinalizar.addEventListener("click", () => {
+      if (itensSolicitados.length === 0) {
+        alert("Adicione pelo menos um item na solicitação.");
+        return;
+      }
+
+      const nome = localStorage.getItem("nomeUsuario");
+      const departamento = localStorage.getItem("departamentoUsuario");
+      const retirada = localStorage.getItem("dataRetirada");
+      const devolucao = localStorage.getItem("dataDevolucao");
+
+      const contadorRef = database.ref("contadorSolicitacoes");
+
+      contadorRef.transaction((contadorAtual) => {
+        return (contadorAtual || 0) + 1;
+      }).then(({ committed, snapshot }) => {
+        if (!committed) {
+          alert("Erro ao gerar número da solicitação.");
+          return;
+        }
+
+        const numSolicitacao = snapshot.val();
+        const dataHora = new Date().toLocaleString("pt-BR");
+
+        const solicitacaoObj = {
+          numero: numSolicitacao,
+          usuario: nome,
+          departamento,
+          dataRetirada: retirada,
+          dataDevolucao: devolucao,
+          dataHoraSolicitacao: dataHora,
+          itens: itensSolicitados,
+          status: "pendente"
+        };
+
+        // Atualiza estoque
+        let atualizouEstoque = true;
+        const atualizacoesEstoque = {};
+
+        itensSolicitados.forEach(({ item, quantidade }) => {
+          const estoqueAtualItem = estoqueAtual[item] || 0;
+          if (estoqueAtualItem < quantidade) {
+            atualizouEstoque = false;
+          } else {
+            atualizacoesEstoque[item] = estoqueAtualItem - quantidade;
+          }
+        });
+
+        if (!atualizouEstoque) {
+          alert("Erro: algum item não possui estoque suficiente.");
+          return;
+        }
+
+        // Atualiza o estoque no Firebase
+        estoqueRef.update(atualizacoesEstoque).then(() => {
+          // Salva a solicitação
+          solicitacoesRef.push(solicitacaoObj).then(() => {
+            mensagemSucesso.textContent = `Solicitação nº ${numSolicitacao} registrada com sucesso!`;
+            itensSolicitados = [];
+            atualizarListaTemporaria();
+            carregarSolicitacoes();
+          }).catch(() => alert("Erro ao registrar solicitação."));
+        }).catch(() => alert("Erro ao atualizar estoque."));
+      }).catch(() => alert("Erro ao obter contador de solicitações."));
+    });
+
+    function carregarSolicitacoes() {
+      listaSolicitacoes.innerHTML = "";
+      solicitacoesRef.once("value").then(snapshot => {
+        const dados = snapshot.val();
+        if (!dados) return;
+
+        Object.values(dados).forEach(solicitacao => {
+          const li = document.createElement("li");
+          li.style.marginBottom = "10px";
+          li.style.padding = "10px";
+          li.style.backgroundColor = "#f0f5ff";
+          li.style.borderRadius = "6px";
+          li.style.border = "1px solid #a8c0ff";
+
+          let itensTxt = solicitacao.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
+
+          li.innerHTML = `
+            <strong>Solicitação nº ${solicitacao.numero}</strong><br/>
+            Usuário: ${solicitacao.usuario} - Departamento: ${solicitacao.departamento}<br/>
+            Retirada: ${solicitacao.dataRetirada} - Devolução: ${solicitacao.dataDevolucao}<br/>
+            Data/Hora: ${solicitacao.dataHoraSolicitacao}<br/>
+            Itens: ${itensTxt}<br/>
+            Status: ${solicitacao.status}
+          `;
+
+          listaSolicitacoes.appendChild(li);
+        });
+      });
+    }
+
+    carregarSolicitacoes();
+  </script>
 </body>
 </html>
