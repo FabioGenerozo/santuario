@@ -2,97 +2,74 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Solicitação de Itens - Estoque</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Solicitação de Itens</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      background: white;
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #ccc;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 20px;
-      margin-bottom: 20px;
+      background: #f9f9f9;
     }
     input, button {
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      margin: 5px 0;
+      padding: 8px;
+      font-size: 1em;
     }
-    button {
-      background-color: #4f46e5;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #4338ca;
-    }
-    #listaSolicitacoes li {
+    form {
       margin-bottom: 10px;
-      padding: 10px;
-      background-color: #f9fafb;
-      border-radius: 6px;
-      border: 1px solid #e5e7eb;
-      list-style: none;
     }
-    #btnLogout {
-      background-color: #ef4444;
-      margin-bottom: 15px;
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    li {
+      background: #fff;
+      border: 1px solid #ccc;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    h2, h3 {
+      margin-top: 20px;
     }
   </style>
-
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Solicitação de Itens</h1>
+  <h1>Solicitação de Itens</h1>
 
-    <div id="userInfoSection">
-      <h2>Informe seus dados</h2>
-      <form id="userInfoForm">
-        <input type="text" id="nomeUsuario" placeholder="Nome do solicitante" required />
-        <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
-        <button type="submit">Salvar Dados</button>
-      </form>
-    </div>
+  <!-- Seção de login -->
+  <div id="userInfoSection">
+    <form id="userInfoForm">
+      <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
+      <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
+      <button type="submit">Continuar</button>
+    </form>
+  </div>
 
-    <div id="solicitacaoSection" style="display:none;">
-      <button id="btnLogout">Sair / Trocar usuário</button>
+  <!-- Seção de solicitação -->
+  <div id="solicitacaoSection" style="display:none;">
+    <button id="btnLogout">Sair / Trocar usuário</button>
 
-      <h2>Solicitar Itens</h2>
-      <form id="solicitarForm">
-        <input type="text" id="itemSolicitado" placeholder="Item desejado" required />
-        <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
-        <button type="submit">Finalizar Solicitação</button>
-      </form>
-      <p id="mensagemSucesso" style="color: green;"></p>
+    <h2>Solicitar Itens</h2>
+    <form id="itemForm">
+      <input type="text" id="itemSolicitado" placeholder="Item desejado" required />
+      <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
+      <button type="submit">Incluir</button>
+    </form>
 
-      <h2>Solicitações Registradas</h2>
-      <ul id="listaSolicitacoes"></ul>
-    </div>
+    <h3>Itens da Solicitação</h3>
+    <ul id="itensTemporarios"></ul>
+
+    <button id="btnFinalizar" style="margin-top: 10px;">Finalizar Solicitação</button>
+    <p id="mensagemSucesso" style="color: green;"></p>
+
+    <h2>Solicitações Registradas</h2>
+    <ul id="listaSolicitacoes"></ul>
   </div>
 
   <script>
-    // Firebase config
     const firebaseConfig = {
       databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
     };
@@ -107,26 +84,27 @@
     const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
 
     const solicitacaoSection = document.getElementById("solicitacaoSection");
-    const solicitarForm = document.getElementById("solicitarForm");
+    const itemForm = document.getElementById("itemForm");
     const itemSolicitadoInput = document.getElementById("itemSolicitado");
     const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
+    const btnFinalizar = document.getElementById("btnFinalizar");
     const mensagemSucesso = document.getElementById("mensagemSucesso");
     const listaSolicitacoes = document.getElementById("listaSolicitacoes");
+    const itensTemporarios = document.getElementById("itensTemporarios");
     const btnLogout = document.getElementById("btnLogout");
 
-    // Função para mostrar a seção de solicitação e esconder a de dados do usuário
+    let itensSolicitados = [];
+
     function mostrarSolicitacaoSection() {
       userInfoSection.style.display = "none";
       solicitacaoSection.style.display = "block";
     }
 
-    // Função para mostrar a seção de dados do usuário e esconder a de solicitação
     function mostrarUserInfoSection() {
       userInfoSection.style.display = "block";
       solicitacaoSection.style.display = "none";
     }
 
-    // Verifica se já tem dados no localStorage para pular a etapa do usuário
     window.addEventListener("load", () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
@@ -137,7 +115,6 @@
       }
     });
 
-    // Salvar dados do usuário no localStorage
     userInfoForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const nome = nomeUsuarioInput.value.trim();
@@ -150,63 +127,98 @@
 
       localStorage.setItem("nomeUsuario", nome);
       localStorage.setItem("departamentoUsuario", departamento);
-
       mostrarSolicitacaoSection();
     });
 
-    // Logout para apagar os dados e voltar para tela de usuário
     btnLogout.addEventListener("click", () => {
       localStorage.removeItem("nomeUsuario");
       localStorage.removeItem("departamentoUsuario");
+      itensSolicitados = [];
+      atualizarListaTemporaria();
       mostrarUserInfoSection();
-      // limpa formulário de solicitação
-      solicitarForm.reset();
-      mensagemSucesso.textContent = "";
-      listaSolicitacoes.innerHTML = "";
     });
 
-    // Enviar solicitação para Firebase
-    solicitarForm.addEventListener("submit", (e) => {
+    // Incluir item na lista temporária
+    itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      const nome = localStorage.getItem("nomeUsuario");
-      const departamento = localStorage.getItem("departamentoUsuario");
       const item = itemSolicitadoInput.value.trim();
       const quantidade = parseInt(quantidadeSolicitadaInput.value);
 
       if (!item || !quantidade || quantidade < 1) {
-        alert("Por favor, preencha o item e a quantidade corretamente.");
+        alert("Preencha item e quantidade corretamente.");
+        return;
+      }
+
+      itensSolicitados.push({ item, quantidade });
+      itemForm.reset();
+      atualizarListaTemporaria();
+    });
+
+    // Atualiza lista com botão de remover
+    function atualizarListaTemporaria() {
+      itensTemporarios.innerHTML = "";
+      itensSolicitados.forEach((obj, index) => {
+        const li = document.createElement("li");
+        li.textContent = `${obj.item} - ${obj.quantidade}`;
+
+        const btnRemover = document.createElement("button");
+        btnRemover.textContent = "❌ Remover";
+        btnRemover.style.marginLeft = "10px";
+        btnRemover.style.background = "#ef4444";
+        btnRemover.style.color = "white";
+        btnRemover.style.border = "none";
+        btnRemover.style.borderRadius = "4px";
+        btnRemover.style.padding = "4px 8px";
+        btnRemover.style.cursor = "pointer";
+
+        btnRemover.addEventListener("click", () => {
+          itensSolicitados.splice(index, 1);
+          atualizarListaTemporaria();
+        });
+
+        li.appendChild(btnRemover);
+        itensTemporarios.appendChild(li);
+      });
+    }
+
+    // Envia solicitação para o Firebase
+    btnFinalizar.addEventListener("click", () => {
+      const nome = localStorage.getItem("nomeUsuario");
+      const departamento = localStorage.getItem("departamentoUsuario");
+
+      if (itensSolicitados.length === 0) {
+        alert("Inclua pelo menos um item antes de finalizar.");
         return;
       }
 
       const novaSolicitacao = {
         solicitante: nome,
         departamento: departamento,
-        item: item,
-        quantidade: quantidade,
+        itens: itensSolicitados,
         data: new Date().toLocaleString()
       };
 
       solicitacoesRef.push(novaSolicitacao);
 
-      solicitarForm.reset();
-      mensagemSucesso.textContent = "Solicitação registrada com sucesso!";
-
-      setTimeout(() => {
-        mensagemSucesso.textContent = "";
-      }, 4000);
+      itensSolicitados = [];
+      atualizarListaTemporaria();
+      mensagemSucesso.textContent = "Solicitação enviada com sucesso!";
+      setTimeout(() => mensagemSucesso.textContent = "", 4000);
     });
 
-    // Exibir lista de solicitações em tempo real
+    // Exibe todas as solicitações já salvas
     solicitacoesRef.on("value", (snapshot) => {
       listaSolicitacoes.innerHTML = "";
 
       snapshot.forEach((childSnapshot) => {
         const s = childSnapshot.val();
-
         const li = document.createElement("li");
-        li.textContent = `${s.solicitante} (${s.departamento}) - ${s.item} (${s.quantidade}) - ${s.data}`;
+        const itensFormatados = s.itens
+          ? s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")
+          : `${s.item} (${s.quantidade})`;
 
+        li.textContent = `${s.solicitante} (${s.departamento}) - ${itensFormatados} - ${s.data}`;
         listaSolicitacoes.appendChild(li);
       });
     });
