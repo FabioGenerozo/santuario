@@ -61,7 +61,6 @@
 </head>
 <body>
   <h1>Solicitação de Itens</h1>
-
   <div id="userInfoSection">
     <form id="userInfoForm">
       <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
@@ -111,7 +110,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
 
@@ -121,7 +119,6 @@
     const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
     const dataRetiradaInput = document.getElementById("dataRetirada");
     const dataDevolucaoInput = document.getElementById("dataDevolucao");
-
     const solicitacaoSection = document.getElementById("solicitacaoSection");
     const itemForm = document.getElementById("itemForm");
     const itemSolicitadoInput = document.getElementById("itemSolicitado");
@@ -208,20 +205,16 @@
 
     itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
-
       const item = itemSolicitadoInput.value.trim();
       const quantidade = parseInt(quantidadeSolicitadaInput.value);
-
       if (!item || !quantidade || quantidade < 1) {
         alert("Preencha item e quantidade corretamente.");
         return;
       }
-
       if (!estoqueAtual[item]) {
         alert("Este item não existe no estoque.");
         return;
       }
-
       if (quantidade > estoqueAtual[item]) {
         alert(`Quantidade solicitada maior que a disponível no estoque (${estoqueAtual[item]}).`);
         return;
@@ -237,7 +230,6 @@
       itensSolicitados.forEach((obj, index) => {
         const li = document.createElement("li");
         li.textContent = `${obj.item} - ${obj.quantidade}`;
-
         const btnRemover = document.createElement("button");
         btnRemover.textContent = "❌ Remover";
         btnRemover.classList.add("remove-btn");
@@ -245,7 +237,6 @@
           itensSolicitados.splice(index, 1);
           atualizarListaTemporaria();
         });
-
         li.appendChild(btnRemover);
         itensTemporarios.appendChild(li);
       });
@@ -253,16 +244,13 @@
 
     async function obterProximoNumeroSolicitacao() {
       const contadorRef = database.ref("contadorSolicitacoes");
-
       const snapshot = await contadorRef.once("value");
       let numeroAtual = snapshot.val();
-
       if (numeroAtual === null) {
         numeroAtual = 1;
       } else {
         numeroAtual += 1;
       }
-
       await contadorRef.set(numeroAtual);
       return numeroAtual;
     }
@@ -291,13 +279,18 @@
         data: new Date().toLocaleString()
       };
 
-      // Salvar no Firebase
-      solicitacoesRef.push(novaSolicitacao);
+      await solicitacoesRef.push(novaSolicitacao);
 
-      // Gerar PDF
+      for (const { item, quantidade } of itensSolicitados) {
+        const itemRef = estoqueRef.child(item);
+        const snapshot = await itemRef.once("value");
+        const estoqueAtual = snapshot.val() || 0;
+        const novoEstoque = estoqueAtual - quantidade;
+        await itemRef.set(novoEstoque);
+      }
+
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-
       doc.setFontSize(16);
       doc.text("Solicitação de Itens", 15, 20);
       doc.setFontSize(12);
@@ -313,27 +306,21 @@
         doc.text(`- ${item.item} (Quantidade: ${item.quantidade})`, 20, y);
         y += 10;
       });
-
       doc.save(`solicitacao_${numeroFormatado}.pdf`);
 
-      // Limpar estado
       itensSolicitados = [];
       atualizarListaTemporaria();
       mensagemSucesso.textContent = "Solicitação finalizada e salva com sucesso!";
       setTimeout(() => {
         mensagemSucesso.textContent = "";
       }, 5000);
-
-      // Voltar à tela inicial (trocar usuário)
       localStorage.clear();
       mostrarUserInfoSection();
     });
 
-    // Listar solicitações já feitas (opcional)
     solicitacoesRef.on("value", (snapshot) => {
       const solicitacoes = snapshot.val() || {};
       listaSolicitacoes.innerHTML = "";
-
       Object.values(solicitacoes).forEach((sol) => {
         const li = document.createElement("li");
         li.textContent = `#${sol.numero} - ${sol.solicitante} - ${sol.departamento} - ${sol.data}`;
