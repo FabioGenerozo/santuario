@@ -72,11 +72,11 @@
       <input type="date" id="dataDevolucao" required />
       <button type="submit">Continuar</button>
     </form>
+    <button id="btnAdmin" style="margin-top:10px;">Ir para Tela de Administração</button>
   </div>
 
   <div id="solicitacaoSection" style="display:none;">
     <button id="btnLogout">Sair / Trocar usuário</button>
-    <button onclick="window.location.href='admin.html'" style="margin-left: 10px;">Painel de Administração</button>
 
     <h2>Solicitar Itens</h2>
 
@@ -134,6 +134,7 @@
     const listaEstoqueUL = document.getElementById("listaEstoqueUL");
     const listaEstoqueDatalist = document.getElementById("listaEstoqueDatalist");
     const btnLogout = document.getElementById("btnLogout");
+    const btnAdmin = document.getElementById("btnAdmin");
 
     let itensSolicitados = [];
     let estoqueAtual = {};
@@ -185,6 +186,10 @@
       itensSolicitados = [];
       atualizarListaTemporaria();
       mostrarUserInfoSection();
+    });
+
+    btnAdmin.addEventListener("click", () => {
+      window.location.href = "admin.html";
     });
 
     estoqueRef.on("value", (snapshot) => {
@@ -240,7 +245,7 @@
         li.textContent = `${obj.item} - ${obj.quantidade}`;
 
         const btnRemover = document.createElement("button");
-        btnRemover.textContent = "❌ Remover";
+        btnRemover.textContent = "Remover";
         btnRemover.classList.add("remove-btn");
         btnRemover.addEventListener("click", () => {
           itensSolicitados.splice(index, 1);
@@ -252,98 +257,64 @@
       });
     }
 
-    async function obterProximoNumeroSolicitacao() {
-      const contadorRef = database.ref("contadorSolicitacoes");
-
-      const snapshot = await contadorRef.once("value");
-      let numeroAtual = snapshot.val();
-
-      if (numeroAtual === null) {
-        numeroAtual = 1;
-      } else {
-        numeroAtual += 1;
+    btnFinalizar.addEventListener("click", () => {
+      if (itensSolicitados.length === 0) {
+        alert("Adicione pelo menos um item na solicitação.");
+        return;
       }
 
-      await contadorRef.set(numeroAtual);
-      return numeroAtual;
-    }
-
-    btnFinalizar.addEventListener("click", async () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
       const retirada = localStorage.getItem("dataRetirada");
       const devolucao = localStorage.getItem("dataDevolucao");
 
-      if (itensSolicitados.length === 0) {
-        alert("Inclua pelo menos um item antes de finalizar.");
-        return;
-      }
-
-      const numeroSolicitacao = await obterProximoNumeroSolicitacao();
-      const numeroFormatado = String(numeroSolicitacao).padStart(4, "0");
-
       const novaSolicitacao = {
-        numero: numeroFormatado,
-        solicitante: nome,
-        departamento: departamento,
+        nome,
+        departamento,
         dataRetirada: retirada,
         dataDevolucao: devolucao,
         itens: itensSolicitados,
-        data: new Date().toLocaleString()
+        timestamp: Date.now()
       };
 
-      solicitacoesRef.push(novaSolicitacao);
-
-      // Atualiza o estoque
+      // Atualiza estoque no Firebase subtraindo os itens solicitados
+      const updates = {};
       itensSolicitados.forEach(({ item, quantidade }) => {
-        const estoqueItemRef = estoqueRef.child(item);
-        estoqueItemRef.transaction((estoqueAtual) => {
-          return (estoqueAtual || 0) - quantidade;
+        const estoqueAtualItem = estoqueAtual[item] || 0;
+        updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+      });
+
+      const solicitacaoKey = solicitacoesRef.push().key;
+
+      updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
+
+      database.ref().update(updates)
+        .then(() => {
+          mensagemSucesso.textContent = "Solicitação finalizada com sucesso!";
+          itensSolicitados = [];
+          atualizarListaTemporaria();
+          carregarSolicitacoes();
+        })
+        .catch((error) => {
+          alert("Erro ao finalizar solicitação: " + error.message);
+        });
+    });
+
+    function carregarSolicitacoes() {
+      solicitacoesRef.once("value", (snapshot) => {
+        const solicitacoes = snapshot.val() || {};
+        listaSolicitacoes.innerHTML = "";
+
+        Object.entries(solicitacoes).forEach(([key, solic]) => {
+          const li = document.createElement("li");
+          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
+          li.textContent = `${solic.nome} - ${solic.departamento} - Retirada: ${solic.dataRetirada} - Devolução: ${solic.dataDevolucao} - Itens: ${itensTexto}`;
+          listaSolicitacoes.appendChild(li);
         });
       });
+    }
 
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(16);
-      doc.text("Solicitação de Itens", 15, 20);
-      doc.setFontSize(12);
-      doc.text(`Nº ${numeroFormatado}`, 15, 30);
-      doc.text(`Solicitante: ${nome}`, 15, 40);
-      doc.text(`Departamento: ${departamento}`, 15, 50);
-      doc.text(`Data de Retirada: ${retirada}`, 15, 60);
-      doc.text(`Data de Devolução: ${devolucao}`, 15, 70);
-      doc.text(`Data da Solicitação: ${novaSolicitacao.data}`, 15, 80);
-      doc.text("Itens Solicitados:", 15, 95);
-      let y = 105;
-      itensSolicitados.forEach((item) => {
-        doc.text(`- ${item.item} (Quantidade: ${item.quantidade})`, 20, y);
-        y += 10;
-      });
-
-      doc.save(`solicitacao_${numeroFormatado}.pdf`);
-
-      itensSolicitados = [];
-      atualizarListaTemporaria();
-      mensagemSucesso.textContent = "Solicitação finalizada e salva com sucesso!";
-      setTimeout(() => {
-        mensagemSucesso.textContent = "";
-      }, 5000);
-
-      localStorage.clear();
-      mostrarUserInfoSection();
-    });
-
-    solicitacoesRef.on("value", (snapshot) => {
-      const solicitacoes = snapshot.val() || {};
-      listaSolicitacoes.innerHTML = "";
-
-      Object.values(solicitacoes).forEach((sol) => {
-        const li = document.createElement("li");
-        li.textContent = `#${sol.numero} - ${sol.solicitante} - ${sol.departamento} - ${sol.data}`;
-        listaSolicitacoes.appendChild(li);
-      });
-    });
+    carregarSolicitacoes();
   </script>
 </body>
 </html>
