@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Estoque - Santuario BJP</title>
+  <title>Solicitação de Itens - Estoque</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f3f4f6;
+      background: #f3f4f6;
       margin: 0;
       padding: 0;
     }
     .container {
       max-width: 600px;
       margin: 30px auto;
-      background: #fff;
+      background: white;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
     }
     h1, h2 {
@@ -29,27 +29,21 @@
       margin-top: 20px;
       margin-bottom: 20px;
     }
-    form input, form button {
+    input, button {
       padding: 10px;
       font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
     button {
       background-color: #4f46e5;
       color: white;
       border: none;
       cursor: pointer;
-      border-radius: 4px;
+      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #4338ca;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
     }
     #listaSolicitacoes li {
       margin-bottom: 10px;
@@ -57,6 +51,11 @@
       background-color: #f9fafb;
       border-radius: 6px;
       border: 1px solid #e5e7eb;
+      list-style: none;
+    }
+    #btnLogout {
+      background-color: #ef4444;
+      margin-bottom: 15px;
     }
   </style>
 
@@ -65,95 +64,150 @@
 </head>
 <body>
   <div class="container">
-    <h1>Estoque Disponível</h1>
-    <ul id="listaEstoque"></ul>
+    <h1>Solicitação de Itens</h1>
 
-    <h2>Solicitar Itens</h2>
-    <form id="solicitarForm">
-      <input type="text" id="solicitante" placeholder="Nome do solicitante" required />
-      <input type="text" id="departamento" placeholder="Departamento" required />
-      <input type="text" id="itemSolicitado" placeholder="Item desejado" required />
-      <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required />
-      <button type="submit">Finalizar Solicitação</button>
-    </form>
-    <p id="mensagemSucesso" style="color: green;"></p>
+    <div id="userInfoSection">
+      <h2>Informe seus dados</h2>
+      <form id="userInfoForm">
+        <input type="text" id="nomeUsuario" placeholder="Nome do solicitante" required />
+        <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
+        <button type="submit">Salvar Dados</button>
+      </form>
+    </div>
 
-    <h2>Solicitações Registradas</h2>
-    <ul id="listaSolicitacoes"></ul>
+    <div id="solicitacaoSection" style="display:none;">
+      <button id="btnLogout">Sair / Trocar usuário</button>
+
+      <h2>Solicitar Itens</h2>
+      <form id="solicitarForm">
+        <input type="text" id="itemSolicitado" placeholder="Item desejado" required />
+        <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
+        <button type="submit">Finalizar Solicitação</button>
+      </form>
+      <p id="mensagemSucesso" style="color: green;"></p>
+
+      <h2>Solicitações Registradas</h2>
+      <ul id="listaSolicitacoes"></ul>
+    </div>
   </div>
 
   <script>
-    // Configuração Firebase
+    // Firebase config
     const firebaseConfig = {
       databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
     };
-
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-    const estoqueRef = database.ref("estoque");
     const solicitacoesRef = database.ref("solicitacoes");
 
-    // Exibir estoque
-    estoqueRef.on("value", (snapshot) => {
-      const lista = document.getElementById("listaEstoque");
-      if (lista) {
-        lista.innerHTML = "";
-        snapshot.forEach((childSnapshot) => {
-          const item = childSnapshot.val();
-          const li = document.createElement("li");
-          li.textContent = `${item.nome} - ${item.quantidade} unidades`;
-          lista.appendChild(li);
-        });
+    // Elementos
+    const userInfoSection = document.getElementById("userInfoSection");
+    const userInfoForm = document.getElementById("userInfoForm");
+    const nomeUsuarioInput = document.getElementById("nomeUsuario");
+    const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
+
+    const solicitacaoSection = document.getElementById("solicitacaoSection");
+    const solicitarForm = document.getElementById("solicitarForm");
+    const itemSolicitadoInput = document.getElementById("itemSolicitado");
+    const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
+    const mensagemSucesso = document.getElementById("mensagemSucesso");
+    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
+    const btnLogout = document.getElementById("btnLogout");
+
+    // Função para mostrar a seção de solicitação e esconder a de dados do usuário
+    function mostrarSolicitacaoSection() {
+      userInfoSection.style.display = "none";
+      solicitacaoSection.style.display = "block";
+    }
+
+    // Função para mostrar a seção de dados do usuário e esconder a de solicitação
+    function mostrarUserInfoSection() {
+      userInfoSection.style.display = "block";
+      solicitacaoSection.style.display = "none";
+    }
+
+    // Verifica se já tem dados no localStorage para pular a etapa do usuário
+    window.addEventListener("load", () => {
+      const nome = localStorage.getItem("nomeUsuario");
+      const departamento = localStorage.getItem("departamentoUsuario");
+      if (nome && departamento) {
+        mostrarSolicitacaoSection();
+      } else {
+        mostrarUserInfoSection();
       }
     });
 
-    // Finalizar solicitação (salvar no banco)
-    document.getElementById("solicitarForm").addEventListener("submit", function (e) {
+    // Salvar dados do usuário no localStorage
+    userInfoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nome = nomeUsuarioInput.value.trim();
+      const departamento = departamentoUsuarioInput.value.trim();
+
+      if (!nome || !departamento) {
+        alert("Por favor, preencha nome e departamento.");
+        return;
+      }
+
+      localStorage.setItem("nomeUsuario", nome);
+      localStorage.setItem("departamentoUsuario", departamento);
+
+      mostrarSolicitacaoSection();
+    });
+
+    // Logout para apagar os dados e voltar para tela de usuário
+    btnLogout.addEventListener("click", () => {
+      localStorage.removeItem("nomeUsuario");
+      localStorage.removeItem("departamentoUsuario");
+      mostrarUserInfoSection();
+      // limpa formulário de solicitação
+      solicitarForm.reset();
+      mensagemSucesso.textContent = "";
+      listaSolicitacoes.innerHTML = "";
+    });
+
+    // Enviar solicitação para Firebase
+    solicitarForm.addEventListener("submit", (e) => {
       e.preventDefault();
 
-      const solicitante = document.getElementById("solicitante").value.trim();
-      const departamento = document.getElementById("departamento").value.trim();
-      const itemSolicitado = document.getElementById("itemSolicitado").value.trim();
-      const quantidadeSolicitada = parseInt(document.getElementById("quantidadeSolicitada").value);
+      const nome = localStorage.getItem("nomeUsuario");
+      const departamento = localStorage.getItem("departamentoUsuario");
+      const item = itemSolicitadoInput.value.trim();
+      const quantidade = parseInt(quantidadeSolicitadaInput.value);
 
-      if (!solicitante || !departamento || !itemSolicitado || !quantidadeSolicitada) {
-        alert("Preencha todos os campos corretamente.");
+      if (!item || !quantidade || quantidade < 1) {
+        alert("Por favor, preencha o item e a quantidade corretamente.");
         return;
       }
 
       const novaSolicitacao = {
-        solicitante,
-        departamento,
-        item: itemSolicitado,
-        quantidade: quantidadeSolicitada,
+        solicitante: nome,
+        departamento: departamento,
+        item: item,
+        quantidade: quantidade,
         data: new Date().toLocaleString()
       };
 
       solicitacoesRef.push(novaSolicitacao);
 
-      document.getElementById("solicitarForm").reset();
-      document.getElementById("mensagemSucesso").textContent = "Solicitação registrada com sucesso!";
+      solicitarForm.reset();
+      mensagemSucesso.textContent = "Solicitação registrada com sucesso!";
 
       setTimeout(() => {
-        document.getElementById("mensagemSucesso").textContent = "";
+        mensagemSucesso.textContent = "";
       }, 4000);
     });
 
-    // Listar solicitações registradas
+    // Exibir lista de solicitações em tempo real
     solicitacoesRef.on("value", (snapshot) => {
-      const lista = document.getElementById("listaSolicitacoes");
-      lista.innerHTML = "";
+      listaSolicitacoes.innerHTML = "";
 
       snapshot.forEach((childSnapshot) => {
         const s = childSnapshot.val();
 
         const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${s.solicitante}</strong> (${s.departamento}) - 
-          ${s.item} (${s.quantidade}) - ${s.data}
-        `;
+        li.textContent = `${s.solicitante} (${s.departamento}) - ${s.item} (${s.quantidade}) - ${s.data}`;
 
-        lista.appendChild(li);
+        listaSolicitacoes.appendChild(li);
       });
     });
   </script>
