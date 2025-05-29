@@ -14,18 +14,15 @@
       background: #f9f9f9;
     }
     header {
-      display: flex;
-      align-items: center;
-      gap: 20px;
+      text-align: center;
       margin-bottom: 20px;
     }
     header img {
-      height: 80px;
-      border-radius: 10px;
+      max-height: 80px;
     }
     header h1 {
       font-size: 1.5em;
-      color: #333;
+      margin: 10px 0 0;
     }
     input, button {
       margin: 5px 0;
@@ -74,7 +71,6 @@
   </style>
 </head>
 <body>
-
   <header>
     <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo">
     <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
@@ -97,10 +93,11 @@
     <button id="btnLogout">Sair / Trocar usuário</button>
 
     <h2>Solicitar Itens</h2>
+
     <div>
       <div>
         <form id="itemForm">
-          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoqueDatalist" required />
+          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoqueDatalist" autocomplete="off" required />
           <datalist id="listaEstoqueDatalist"></datalist>
           <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
           <button type="submit">Incluir</button>
@@ -129,25 +126,29 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
 
+    const userInfoSection = document.getElementById("userInfoSection");
+    const userInfoForm = document.getElementById("userInfoForm");
     const nomeUsuarioInput = document.getElementById("nomeUsuario");
     const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
     const dataRetiradaInput = document.getElementById("dataRetirada");
     const dataDevolucaoInput = document.getElementById("dataDevolucao");
+
+    const solicitacaoSection = document.getElementById("solicitacaoSection");
+    const itemForm = document.getElementById("itemForm");
     const itemSolicitadoInput = document.getElementById("itemSolicitado");
     const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
+    const btnFinalizar = document.getElementById("btnFinalizar");
+    const mensagemSucesso = document.getElementById("mensagemSucesso");
+    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
+    const itensTemporarios = document.getElementById("itensTemporarios");
     const listaEstoqueUL = document.getElementById("listaEstoqueUL");
     const listaEstoqueDatalist = document.getElementById("listaEstoqueDatalist");
-    const itensTemporarios = document.getElementById("itensTemporarios");
-    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
-
-    const userInfoSection = document.getElementById("userInfoSection");
-    const solicitacaoSection = document.getElementById("solicitacaoSection");
     const btnLogout = document.getElementById("btnLogout");
     const btnAdmin = document.getElementById("btnAdmin");
-    const mensagemSucesso = document.getElementById("mensagemSucesso");
 
     let itensSolicitados = [];
     let estoqueAtual = {};
@@ -175,7 +176,7 @@
       }
     });
 
-    document.getElementById("userInfoForm").addEventListener("submit", (e) => {
+    userInfoForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const nome = nomeUsuarioInput.value.trim();
       const departamento = departamentoUsuarioInput.value.trim();
@@ -207,24 +208,31 @@
 
     estoqueRef.on("value", (snapshot) => {
       estoqueAtual = snapshot.val() || {};
-      atualizarListaEstoque();
+      atualizarListaEstoque(estoqueAtual);
     });
 
-    function atualizarListaEstoque() {
+    function atualizarListaEstoque(estoque) {
       listaEstoqueUL.innerHTML = "";
       listaEstoqueDatalist.innerHTML = "";
-      Object.entries(estoqueAtual).forEach(([item, quantidade]) => {
-        listaEstoqueUL.innerHTML += `<li>${item} — Quantidade: ${quantidade}</li>`;
-        listaEstoqueDatalist.innerHTML += `<option value="${item}"></option>`;
-      });
+
+      for (const [item, quantidade] of Object.entries(estoque)) {
+        const li = document.createElement("li");
+        li.textContent = `${item} — Quantidade: ${quantidade}`;
+        listaEstoqueUL.appendChild(li);
+
+        const option = document.createElement("option");
+        option.value = item;
+        listaEstoqueDatalist.appendChild(option);
+      }
     }
 
-    document.getElementById("itemForm").addEventListener("submit", (e) => {
+    itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
+
       const item = itemSolicitadoInput.value.trim();
       const quantidade = parseInt(quantidadeSolicitadaInput.value);
 
-      if (!item || isNaN(quantidade) || quantidade < 1) {
+      if (!item || !quantidade || quantidade < 1) {
         alert("Preencha item e quantidade corretamente.");
         return;
       }
@@ -235,94 +243,110 @@
       }
 
       if (quantidade > estoqueAtual[item]) {
-        alert(`Quantidade solicitada maior que a disponível (${estoqueAtual[item]}).`);
+        alert(`Quantidade solicitada maior que a disponível no estoque (${estoqueAtual[item]}).`);
         return;
       }
 
       itensSolicitados.push({ item, quantidade });
-      e.target.reset();
+      itemForm.reset();
       atualizarListaTemporaria();
     });
 
     function atualizarListaTemporaria() {
       itensTemporarios.innerHTML = "";
-      itensSolicitados.forEach((obj, i) => {
+      itensSolicitados.forEach((obj, index) => {
         const li = document.createElement("li");
         li.textContent = `${obj.item} - ${obj.quantidade}`;
-        const btn = document.createElement("button");
-        btn.textContent = "Remover";
-        btn.className = "remove-btn";
-        btn.onclick = () => {
-          itensSolicitados.splice(i, 1);
+
+        const btnRemover = document.createElement("button");
+        btnRemover.textContent = "Remover";
+        btnRemover.classList.add("remove-btn");
+        btnRemover.addEventListener("click", () => {
+          itensSolicitados.splice(index, 1);
           atualizarListaTemporaria();
-        };
-        li.appendChild(btn);
+        });
+
+        li.appendChild(btnRemover);
         itensTemporarios.appendChild(li);
       });
     }
 
-    document.getElementById("btnFinalizar").addEventListener("click", () => {
-      if (!itensSolicitados.length) return alert("Adicione pelo menos um item.");
+    async function gerarPDF(solicitacao) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text("Solicitação de Itens", 10, 10);
+      doc.text(`Nome: ${solicitacao.nome}`, 10, 20);
+      doc.text(`Departamento: ${solicitacao.departamento}`, 10, 30);
+      doc.text(`Retirada: ${solicitacao.dataRetirada}`, 10, 40);
+      doc.text(`Devolução: ${solicitacao.dataDevolucao}`, 10, 50);
+
+      let y = 60;
+      solicitacao.itens.forEach(({ item, quantidade }) => {
+        doc.text(`- ${item}: ${quantidade}`, 10, y);
+        y += 10;
+      });
+
+      doc.save(`solicitacao-${solicitacao.numero}.pdf`);
+    }
+
+    btnFinalizar.addEventListener("click", async () => {
+      if (itensSolicitados.length === 0) {
+        alert("Adicione pelo menos um item na solicitação.");
+        return;
+      }
 
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
       const retirada = localStorage.getItem("dataRetirada");
       const devolucao = localStorage.getItem("dataDevolucao");
 
-      const dataHora = new Date().toLocaleString("pt-BR");
+      // Geração sequencial de número
+      const snapshot = await solicitacoesRef.once("value");
+      const total = snapshot.numChildren() + 1;
+      const numero = total.toString().padStart(4, "0");
+
       const novaSolicitacao = {
-        solicitante: nome,
+        nome,
         departamento,
         dataRetirada: retirada,
         dataDevolucao: devolucao,
-        data: dataHora,
-        itens: itensSolicitados
+        itens: itensSolicitados,
+        numero,
+        timestamp: Date.now()
       };
 
-      solicitacoesRef.once("value").then(snapshot => {
-        const total = Object.keys(snapshot.val() || {}).length + 1;
-        novaSolicitacao.numero = total.toString().padStart(4, "0");
+      const updates = {};
+      itensSolicitados.forEach(({ item, quantidade }) => {
+        const estoqueAtualItem = estoqueAtual[item] || 0;
+        updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+      });
 
-        const key = solicitacoesRef.push().key;
-        const updates = {};
-        novaSolicitacao.itens.forEach(({ item, quantidade }) => {
-          updates[`estoque/${item}`] = (estoqueAtual[item] || 0) - quantidade;
+      const solicitacaoKey = solicitacoesRef.push().key;
+      updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
+
+      database.ref().update(updates)
+        .then(() => {
+          mensagemSucesso.textContent = `Solicitação ${numero} finalizada com sucesso!`;
+          gerarPDF(novaSolicitacao);
+          itensSolicitados = [];
+          atualizarListaTemporaria();
+          carregarSolicitacoes();
+        })
+        .catch((error) => {
+          alert("Erro ao finalizar solicitação: " + error.message);
         });
-        updates[`solicitacoes/${key}`] = novaSolicitacao;
-
-        return database.ref().update(updates).then(() => gerarPDF(novaSolicitacao));
-      });
     });
-
-    function gerarPDF(solic) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(12);
-      doc.text("Patrimônio do Santuário Bom Jesus de Piraporinha", 20, 20);
-      doc.text(`Solicitante: ${solic.solicitante}`, 20, 30);
-      doc.text(`Departamento: ${solic.departamento}`, 20, 40);
-      doc.text(`Data da Retirada: ${solic.dataRetirada}`, 20, 50);
-      doc.text(`Data da Devolução: ${solic.dataDevolucao}`, 20, 60);
-      doc.text(`Código da Solicitação: ${solic.numero}`, 20, 70);
-
-      doc.text("Itens:", 20, 85);
-      solic.itens.forEach((item, i) => {
-        doc.text(`- ${item.item} (${item.quantidade})`, 25, 95 + i * 10);
-      });
-
-      doc.save(`solicitacao_${solic.numero}.pdf`);
-      mensagemSucesso.textContent = "Solicitação registrada com sucesso!";
-      itensSolicitados = [];
-      atualizarListaTemporaria();
-      carregarSolicitacoes();
-    }
 
     function carregarSolicitacoes() {
       solicitacoesRef.once("value", (snapshot) => {
+        const solicitacoes = snapshot.val() || {};
         listaSolicitacoes.innerHTML = "";
-        Object.values(snapshot.val() || {}).forEach((s) => {
+
+        Object.entries(solicitacoes).forEach(([key, solic]) => {
           const li = document.createElement("li");
-          li.textContent = `#${s.numero} - ${s.solicitante} (${s.departamento}) - ${s.dataRetirada} → ${s.dataDevolucao}`;
+          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
+          li.textContent = `#${solic.numero} - ${solic.nome} - ${solic.departamento} - Retirada: ${solic.dataRetirada} - Devolução: ${solic.dataDevolucao} - Itens: ${itensTexto}`;
           listaSolicitacoes.appendChild(li);
         });
       });
@@ -330,6 +354,5 @@
 
     carregarSolicitacoes();
   </script>
-
 </body>
 </html>
