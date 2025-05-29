@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Solicitação de Itens com Estoque</title>
+  <title>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -12,6 +12,20 @@
       font-family: Arial, sans-serif;
       padding: 20px;
       background: #f9f9f9;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    header img {
+      height: 80px;
+      border-radius: 10px;
+    }
+    header h1 {
+      font-size: 1.5em;
+      color: #333;
     }
     input, button {
       margin: 5px 0;
@@ -60,7 +74,11 @@
   </style>
 </head>
 <body>
-  <h1>Solicitação de Itens</h1>
+
+  <header>
+    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo">
+    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
+  </header>
 
   <div id="userInfoSection">
     <form id="userInfoForm">
@@ -79,11 +97,10 @@
     <button id="btnLogout">Sair / Trocar usuário</button>
 
     <h2>Solicitar Itens</h2>
-
     <div>
       <div>
         <form id="itemForm">
-          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoqueDatalist" autocomplete="off" required />
+          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoqueDatalist" required />
           <datalist id="listaEstoqueDatalist"></datalist>
           <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
           <button type="submit">Incluir</button>
@@ -112,29 +129,25 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
 
-    const userInfoSection = document.getElementById("userInfoSection");
-    const userInfoForm = document.getElementById("userInfoForm");
     const nomeUsuarioInput = document.getElementById("nomeUsuario");
     const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
     const dataRetiradaInput = document.getElementById("dataRetirada");
     const dataDevolucaoInput = document.getElementById("dataDevolucao");
-
-    const solicitacaoSection = document.getElementById("solicitacaoSection");
-    const itemForm = document.getElementById("itemForm");
     const itemSolicitadoInput = document.getElementById("itemSolicitado");
     const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
-    const btnFinalizar = document.getElementById("btnFinalizar");
-    const mensagemSucesso = document.getElementById("mensagemSucesso");
-    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
-    const itensTemporarios = document.getElementById("itensTemporarios");
     const listaEstoqueUL = document.getElementById("listaEstoqueUL");
     const listaEstoqueDatalist = document.getElementById("listaEstoqueDatalist");
+    const itensTemporarios = document.getElementById("itensTemporarios");
+    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
+
+    const userInfoSection = document.getElementById("userInfoSection");
+    const solicitacaoSection = document.getElementById("solicitacaoSection");
     const btnLogout = document.getElementById("btnLogout");
     const btnAdmin = document.getElementById("btnAdmin");
+    const mensagemSucesso = document.getElementById("mensagemSucesso");
 
     let itensSolicitados = [];
     let estoqueAtual = {};
@@ -162,7 +175,7 @@
       }
     });
 
-    userInfoForm.addEventListener("submit", (e) => {
+    document.getElementById("userInfoForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const nome = nomeUsuarioInput.value.trim();
       const departamento = departamentoUsuarioInput.value.trim();
@@ -194,31 +207,24 @@
 
     estoqueRef.on("value", (snapshot) => {
       estoqueAtual = snapshot.val() || {};
-      atualizarListaEstoque(estoqueAtual);
+      atualizarListaEstoque();
     });
 
-    function atualizarListaEstoque(estoque) {
+    function atualizarListaEstoque() {
       listaEstoqueUL.innerHTML = "";
       listaEstoqueDatalist.innerHTML = "";
-
-      for (const [item, quantidade] of Object.entries(estoque)) {
-        const li = document.createElement("li");
-        li.textContent = `${item} — Quantidade: ${quantidade}`;
-        listaEstoqueUL.appendChild(li);
-
-        const option = document.createElement("option");
-        option.value = item;
-        listaEstoqueDatalist.appendChild(option);
-      }
+      Object.entries(estoqueAtual).forEach(([item, quantidade]) => {
+        listaEstoqueUL.innerHTML += `<li>${item} — Quantidade: ${quantidade}</li>`;
+        listaEstoqueDatalist.innerHTML += `<option value="${item}"></option>`;
+      });
     }
 
-    itemForm.addEventListener("submit", (e) => {
+    document.getElementById("itemForm").addEventListener("submit", (e) => {
       e.preventDefault();
-
       const item = itemSolicitadoInput.value.trim();
       const quantidade = parseInt(quantidadeSolicitadaInput.value);
 
-      if (!item || !quantidade || quantidade < 1) {
+      if (!item || isNaN(quantidade) || quantidade < 1) {
         alert("Preencha item e quantidade corretamente.");
         return;
       }
@@ -229,130 +235,101 @@
       }
 
       if (quantidade > estoqueAtual[item]) {
-        alert(`Quantidade solicitada maior que a disponível no estoque (${estoqueAtual[item]}).`);
+        alert(`Quantidade solicitada maior que a disponível (${estoqueAtual[item]}).`);
         return;
       }
 
       itensSolicitados.push({ item, quantidade });
-      itemForm.reset();
+      e.target.reset();
       atualizarListaTemporaria();
     });
 
     function atualizarListaTemporaria() {
       itensTemporarios.innerHTML = "";
-      itensSolicitados.forEach((obj, index) => {
+      itensSolicitados.forEach((obj, i) => {
         const li = document.createElement("li");
         li.textContent = `${obj.item} - ${obj.quantidade}`;
-
-        const btnRemover = document.createElement("button");
-        btnRemover.textContent = "Remover";
-        btnRemover.classList.add("remove-btn");
-        btnRemover.addEventListener("click", () => {
-          itensSolicitados.splice(index, 1);
+        const btn = document.createElement("button");
+        btn.textContent = "Remover";
+        btn.className = "remove-btn";
+        btn.onclick = () => {
+          itensSolicitados.splice(i, 1);
           atualizarListaTemporaria();
-        });
-
-        li.appendChild(btnRemover);
+        };
+        li.appendChild(btn);
         itensTemporarios.appendChild(li);
       });
     }
 
-    btnFinalizar.addEventListener("click", async () => {
-      if (itensSolicitados.length === 0) {
-        alert("Adicione pelo menos um item na solicitação.");
-        return;
-      }
+    document.getElementById("btnFinalizar").addEventListener("click", () => {
+      if (!itensSolicitados.length) return alert("Adicione pelo menos um item.");
 
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
       const retirada = localStorage.getItem("dataRetirada");
       const devolucao = localStorage.getItem("dataDevolucao");
 
-      try {
-        // Busca último número de solicitação
-        const snapshot = await solicitacoesRef.orderByChild("timestamp").limitToLast(1).once("value");
-        let ultimoNumero = 0;
-        snapshot.forEach(child => {
-          const num = parseInt(child.val().numero);
-          if (!isNaN(num)) ultimoNumero = num;
-        });
-        const novoNumero = String(ultimoNumero + 1).padStart(4, "0");
+      const dataHora = new Date().toLocaleString("pt-BR");
+      const novaSolicitacao = {
+        solicitante: nome,
+        departamento,
+        dataRetirada: retirada,
+        dataDevolucao: devolucao,
+        data: dataHora,
+        itens: itensSolicitados
+      };
 
-        const dataHora = new Date().toLocaleString("pt-BR");
+      solicitacoesRef.once("value").then(snapshot => {
+        const total = Object.keys(snapshot.val() || {}).length + 1;
+        novaSolicitacao.numero = total.toString().padStart(4, "0");
 
-        const novaSolicitacao = {
-          numero: novoNumero,
-          solicitante: nome,
-          departamento: departamento,
-          dataRetirada: retirada,
-          dataDevolucao: devolucao,
-          data: dataHora,
-          itens: itensSolicitados,
-          timestamp: Date.now()
-        };
-
-        // Atualiza estoque no Firebase
+        const key = solicitacoesRef.push().key;
         const updates = {};
-        itensSolicitados.forEach(({ item, quantidade }) => {
-          const estoqueAtualItem = estoqueAtual[item] || 0;
-          updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+        novaSolicitacao.itens.forEach(({ item, quantidade }) => {
+          updates[`estoque/${item}`] = (estoqueAtual[item] || 0) - quantidade;
         });
+        updates[`solicitacoes/${key}`] = novaSolicitacao;
 
-        const solicitacaoKey = solicitacoesRef.push().key;
-        updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
-
-        await database.ref().update(updates);
-
-        mensagemSucesso.textContent = "Solicitação finalizada com sucesso!";
-        gerarPDF(novaSolicitacao);
-
-        itensSolicitados = [];
-        atualizarListaTemporaria();
-        carregarSolicitacoes();
-
-      } catch (error) {
-        alert("Erro ao finalizar solicitação: " + error.message);
-      }
+        return database.ref().update(updates).then(() => gerarPDF(novaSolicitacao));
+      });
     });
 
+    function gerarPDF(solic) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(12);
+      doc.text("Patrimônio do Santuário Bom Jesus de Piraporinha", 20, 20);
+      doc.text(`Solicitante: ${solic.solicitante}`, 20, 30);
+      doc.text(`Departamento: ${solic.departamento}`, 20, 40);
+      doc.text(`Data da Retirada: ${solic.dataRetirada}`, 20, 50);
+      doc.text(`Data da Devolução: ${solic.dataDevolucao}`, 20, 60);
+      doc.text(`Código da Solicitação: ${solic.numero}`, 20, 70);
+
+      doc.text("Itens:", 20, 85);
+      solic.itens.forEach((item, i) => {
+        doc.text(`- ${item.item} (${item.quantidade})`, 25, 95 + i * 10);
+      });
+
+      doc.save(`solicitacao_${solic.numero}.pdf`);
+      mensagemSucesso.textContent = "Solicitação registrada com sucesso!";
+      itensSolicitados = [];
+      atualizarListaTemporaria();
+      carregarSolicitacoes();
+    }
+
     function carregarSolicitacoes() {
-      listaSolicitacoes.innerHTML = "";
-      solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
-        snapshot.forEach((child) => {
-          const s = child.val();
+      solicitacoesRef.once("value", (snapshot) => {
+        listaSolicitacoes.innerHTML = "";
+        Object.values(snapshot.val() || {}).forEach((s) => {
           const li = document.createElement("li");
-          li.innerHTML = `<strong>#${s.numero}</strong> - ${s.solicitante} (${s.departamento}) - ${s.data}<br>
-            Retirada: ${s.dataRetirada}, Devolução: ${s.dataDevolucao}<br>
-            Itens:<br> ${s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")}`;
+          li.textContent = `#${s.numero} - ${s.solicitante} (${s.departamento}) - ${s.dataRetirada} → ${s.dataDevolucao}`;
           listaSolicitacoes.appendChild(li);
         });
       });
     }
 
     carregarSolicitacoes();
-
-    function gerarPDF(solicitacao) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(14);
-      doc.text("Solicitação de Itens", 15, 15);
-
-      doc.setFontSize(11);
-      doc.text(`Nº Solicitação: ${solicitacao.numero}`, 15, 30);
-      doc.text(`Solicitante: ${solicitacao.solicitante}`, 15, 40);
-      doc.text(`Departamento: ${solicitacao.departamento}`, 15, 50);
-      doc.text(`Data Retirada: ${solicitacao.dataRetirada}`, 15, 60);
-      doc.text(`Data Devolução: ${solicitacao.dataDevolucao}`, 15, 70);
-      doc.text(`Data da Solicitação: ${solicitacao.data}`, 15, 80);
-
-      doc.text("Itens:", 15, 95);
-      solicitacao.itens.forEach((i, idx) => {
-        doc.text(`- ${i.item} (${i.quantidade})`, 20, 105 + idx * 10);
-      });
-
-      doc.save(`solicitacao_${solicitacao.numero}.pdf`);
-    }
   </script>
+
 </body>
 </html>
