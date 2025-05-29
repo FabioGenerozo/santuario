@@ -12,6 +12,9 @@
       padding: 20px;
       background: #f5f5f5;
     }
+    #content {
+      display: none; /* Oculto até validar senha */
+    }
     header {
       display: flex;
       align-items: center;
@@ -56,134 +59,156 @@
   </style>
 </head>
 <body>
-  <header>
-    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo do Patrimônio" />
-    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</h1>
-  </header>
 
-  <button id="btnVoltar">← Voltar para Início</button>
+  <div id="content">
+    <header>
+      <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo do Patrimônio" />
+      <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</h1>
+    </header>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Nº Solicitação</th>
-        <th>Nome</th>
-        <th>Departamento</th>
-        <th>Data Retirada</th>
-        <th>Data Devolução</th>
-        <th>Itens</th>
-        <th>Ação</th>
-      </tr>
-    </thead>
-    <tbody id="tabelaSolicitacoesCorpo"></tbody>
-  </table>
+    <button id="btnVoltar">← Voltar para Início</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nº Solicitação</th>
+          <th>Nome</th>
+          <th>Departamento</th>
+          <th>Data Retirada</th>
+          <th>Data Devolução</th>
+          <th>Itens</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaSolicitacoesCorpo"></tbody>
+    </table>
+  </div>
 
   <script>
-    const firebaseConfig = {
-      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const senhaCorreta = tcv261016; // <-- Defina aqui sua senha segura!
 
-    const solicitacoesRef = database.ref("solicitacoes");
-    const estoqueRef = database.ref("estoque");
-
-    const tabelaCorpo = document.getElementById("tabelaSolicitacoesCorpo");
-    const btnVoltar = document.getElementById("btnVoltar");
-
-    btnVoltar.addEventListener("click", () => {
-      window.location.href = "index.html";
-    });
-
-    function carregarSolicitacoes() {
-      tabelaCorpo.innerHTML = "";
-      solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
-        const data = snapshot.val();
-        if (!data) return;
-
-        // Ordenar por número sequencial crescente
-        const ord = Object.values(data).sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
-
-        ord.forEach((sol) => {
-          const tr = document.createElement("tr");
-
-          const tdNumero = document.createElement("td");
-          tdNumero.textContent = sol.numero;
-          tr.appendChild(tdNumero);
-
-          const tdNome = document.createElement("td");
-          tdNome.textContent = sol.nome;
-          tr.appendChild(tdNome);
-
-          const tdDepto = document.createElement("td");
-          tdDepto.textContent = sol.departamento;
-          tr.appendChild(tdDepto);
-
-          const tdRetirada = document.createElement("td");
-          tdRetirada.textContent = sol.dataRetirada;
-          tr.appendChild(tdRetirada);
-
-          const tdDevolucao = document.createElement("td");
-          tdDevolucao.textContent = sol.dataDevolucao;
-          tr.appendChild(tdDevolucao);
-
-          const tdItens = document.createElement("td");
-          tdItens.innerHTML = sol.itens.map(i => `${i.item} (x${i.quantidade})`).join("<br>");
-          tr.appendChild(tdItens);
-
-          const tdAcao = document.createElement("td");
-          const btnDevolver = document.createElement("button");
-          btnDevolver.textContent = "Marcar Devolvido";
-          btnDevolver.addEventListener("click", () => {
-            confirmarDevolucao(sol);
-          });
-          tdAcao.appendChild(btnDevolver);
-          tr.appendChild(tdAcao);
-
-          tabelaCorpo.appendChild(tr);
-        });
-      });
+    function pedirSenha() {
+      const senha = prompt("Por favor, insira a senha para acessar a administração:");
+      if (senha === senhaCorreta) {
+        document.getElementById("content").style.display = "block";
+        iniciarFirebase();
+      } else {
+        alert("Senha incorreta! Acesso negado.");
+        document.body.innerHTML = "<h2>Acesso negado.</h2>";
+      }
     }
 
-    function confirmarDevolucao(solicitacao) {
-      if (!confirm(`Confirmar devolução da solicitação Nº ${solicitacao.numero}?`)) {
-        return;
+    function iniciarFirebase() {
+      const firebaseConfig = {
+        databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+
+      const solicitacoesRef = database.ref("solicitacoes");
+      const estoqueRef = database.ref("estoque");
+
+      const tabelaCorpo = document.getElementById("tabelaSolicitacoesCorpo");
+      const btnVoltar = document.getElementById("btnVoltar");
+
+      btnVoltar.addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+
+      function carregarSolicitacoes() {
+        tabelaCorpo.innerHTML = "";
+        solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
+          const data = snapshot.val();
+          if (!data) return;
+
+          const ord = Object.values(data).sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
+
+          ord.forEach((sol) => {
+            const tr = document.createElement("tr");
+
+            const tdNumero = document.createElement("td");
+            tdNumero.textContent = sol.numero;
+            tr.appendChild(tdNumero);
+
+            const tdNome = document.createElement("td");
+            tdNome.textContent = sol.nome;
+            tr.appendChild(tdNome);
+
+            const tdDepto = document.createElement("td");
+            tdDepto.textContent = sol.departamento;
+            tr.appendChild(tdDepto);
+
+            const tdRetirada = document.createElement("td");
+            tdRetirada.textContent = sol.dataRetirada;
+            tr.appendChild(tdRetirada);
+
+            const tdDevolucao = document.createElement("td");
+            tdDevolucao.textContent = sol.dataDevolucao;
+            tr.appendChild(tdDevolucao);
+
+            const tdItens = document.createElement("td");
+            tdItens.innerHTML = sol.itens.map(i => `${i.item} (x${i.quantidade})`).join("<br>");
+            tr.appendChild(tdItens);
+
+            const tdAcao = document.createElement("td");
+            const btnDevolver = document.createElement("button");
+            btnDevolver.textContent = "Marcar Devolvido";
+            btnDevolver.addEventListener("click", () => {
+              confirmarDevolucao(sol);
+            });
+            tdAcao.appendChild(btnDevolver);
+            tr.appendChild(tdAcao);
+
+            tabelaCorpo.appendChild(tr);
+          });
+        });
       }
 
-      // Remover a solicitação e devolver itens para estoque
-      solicitacoesRef.orderByChild("numero").equalTo(solicitacao.numero).once("value", snapshot => {
-        const dados = snapshot.val();
-        if (!dados) {
-          alert("Solicitação não encontrada.");
+      function confirmarDevolucao(solicitacao) {
+        if (!confirm(`Confirmar devolução da solicitação Nº ${solicitacao.numero}?`)) {
           return;
         }
-        // Pegando a chave da solicitação para remover
-        const key = Object.keys(dados)[0];
 
-        const updates = {};
-        // Atualizar estoque somando os itens devolvidos
-        solicitacao.itens.forEach(({ item, quantidade }) => {
-          const path = `estoque/${item}`;
-          estoqueRef.child(item).once("value", snap => {
-            const atual = snap.val() || 0;
-            updates[path] = atual + quantidade;
+        solicitacoesRef.orderByChild("numero").equalTo(solicitacao.numero).once("value", snapshot => {
+          const dados = snapshot.val();
+          if (!dados) {
+            alert("Solicitação não encontrada.");
+            return;
+          }
+          const key = Object.keys(dados)[0];
 
-            // Atualiza no banco e remove a solicitação só depois que todos itens estiverem atualizados
-            database.ref().update(updates)
-              .then(() => solicitacoesRef.child(key).remove())
-              .then(() => {
-                alert(`Solicitação Nº ${solicitacao.numero} devolvida com sucesso!`);
-                carregarSolicitacoes();
-              })
-              .catch(err => {
-                alert("Erro ao processar devolução: " + err.message);
-              });
+          const updates = {};
+          let promises = [];
+
+          solicitacao.itens.forEach(({ item, quantidade }) => {
+            const p = estoqueRef.child(item).once("value").then(snap => {
+              const atual = snap.val() || 0;
+              updates[`estoque/${item}`] = atual + quantidade;
+            });
+            promises.push(p);
           });
+
+          Promise.all(promises)
+            .then(() => {
+              return database.ref().update(updates);
+            })
+            .then(() => {
+              return solicitacoesRef.child(key).remove();
+            })
+            .then(() => {
+              alert(`Solicitação Nº ${solicitacao.numero} devolvida com sucesso!`);
+              carregarSolicitacoes();
+            })
+            .catch(err => {
+              alert("Erro ao processar devolução: " + err.message);
+            });
         });
-      });
+      }
+
+      carregarSolicitacoes();
     }
 
-    carregarSolicitacoes();
+    pedirSenha();
   </script>
 </body>
 </html>
