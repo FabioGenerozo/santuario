@@ -6,6 +6,7 @@
   <title>Solicitação de Itens</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -43,7 +44,6 @@
 <body>
   <h1>Solicitação de Itens</h1>
 
-  <!-- Seção de login -->
   <div id="userInfoSection">
     <form id="userInfoForm">
       <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
@@ -56,7 +56,6 @@
     </form>
   </div>
 
-  <!-- Seção de solicitação -->
   <div id="solicitacaoSection" style="display:none;">
     <button id="btnLogout">Sair / Trocar usuário</button>
 
@@ -195,7 +194,7 @@
       });
     }
 
-    btnFinalizar.addEventListener("click", () => {
+    btnFinalizar.addEventListener("click", async () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
       const retirada = localStorage.getItem("dataRetirada");
@@ -217,10 +216,31 @@
 
       solicitacoesRef.push(novaSolicitacao);
 
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(16);
+      doc.text("Solicitação de Itens", 15, 20);
+      doc.setFontSize(12);
+      doc.text(`Solicitante: ${nome}`, 15, 35);
+      doc.text(`Departamento: ${departamento}`, 15, 45);
+      doc.text(`Data de Retirada: ${retirada}`, 15, 55);
+      doc.text(`Data de Devolução: ${devolucao}`, 15, 65);
+      doc.text(`Data da Solicitação: ${novaSolicitacao.data}`, 15, 75);
+      doc.text("Itens Solicitados:", 15, 90);
+      let y = 100;
+      itensSolicitados.forEach((item) => {
+        doc.text(`- ${item.item} (Quantidade: ${item.quantidade})`, 20, y);
+        y += 10;
+      });
+
+      doc.save(`solicitacao_${nome.replace(/\s+/g, "_")}.pdf`);
+
+      // Limpa dados
       itensSolicitados = [];
+      localStorage.clear();
       atualizarListaTemporaria();
-      mensagemSucesso.textContent = "Solicitação enviada com sucesso!";
-      setTimeout(() => mensagemSucesso.textContent = "", 4000);
+      mostrarUserInfoSection();
     });
 
     solicitacoesRef.on("value", (snapshot) => {
