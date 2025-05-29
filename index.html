@@ -8,6 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    /* ... seu CSS permanece o mesmo ... */
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 20px;
@@ -387,24 +388,53 @@
         });
 
         if (!atualizouEstoque) {
-          alert("Erro: algum item não possui estoque suficiente.");
+          alert("Estoque insuficiente para a solicitação.");
           return;
         }
 
-        // Atualiza o estoque no Firebase
-        estoqueRef.update(atualizacoesEstoque).then(() => {
-          // Salva a solicitação
-          solicitacoesRef.push(solicitacaoObj).then(() => {
-            mensagemSucesso.textContent = `Solicitação nº ${numSolicitacao} registrada com sucesso!`;
-            itensSolicitados = [];
-            atualizarListaTemporaria();
-            carregarSolicitacoes();
-          }).catch(() => alert("Erro ao registrar solicitação."));
-        }).catch(() => alert("Erro ao atualizar estoque."));
-      }).catch(() => alert("Erro ao obter contador de solicitações."));
+        // Escreve solicitação no Firebase
+        solicitacoesRef.child(numSolicitacao).set(solicitacaoObj)
+          .then(() => {
+            // Atualiza estoque no Firebase
+            estoqueRef.update(atualizacoesEstoque)
+              .then(() => {
+                mensagemSucesso.textContent = "Solicitação realizada com sucesso!";
+                itensSolicitados = [];
+                atualizarListaTemporaria();
+              })
+              .catch(() => {
+                alert("Erro ao atualizar estoque.");
+              });
+          })
+          .catch(() => {
+            alert("Erro ao salvar solicitação.");
+          });
+      });
     });
 
-  
+    // Atualiza lista de solicitações em tempo real:
+    solicitacoesRef.on("value", (snapshot) => {
+      const solicitacoes = snapshot.val() || {};
+      listaSolicitacoes.innerHTML = "";
+
+      Object.values(solicitacoes).forEach(solicitacao => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>#${solicitacao.numero} - ${solicitacao.usuario}</strong> (${solicitacao.departamento})<br/>
+          Retirada: ${solicitacao.dataRetirada} | Devolução: ${solicitacao.dataDevolucao} <br/>
+          Status: ${solicitacao.status}<br/>
+          Itens:<br/>
+        `;
+        const ulItens = document.createElement("ul");
+        solicitacao.itens.forEach(({ item, quantidade }) => {
+          const liItem = document.createElement("li");
+          liItem.textContent = `${item} — Quantidade: ${quantidade}`;
+          ulItens.appendChild(liItem);
+        });
+        li.appendChild(ulItens);
+        listaSolicitacoes.appendChild(li);
+      });
+    });
   </script>
 </body>
 </html>
