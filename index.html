@@ -34,6 +34,10 @@
     h2, h3 {
       margin-top: 20px;
     }
+    label {
+      display: block;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -44,6 +48,10 @@
     <form id="userInfoForm">
       <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
       <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
+      <label>Data de Retirada:</label>
+      <input type="date" id="dataRetirada" required />
+      <label>Data de Devolução:</label>
+      <input type="date" id="dataDevolucao" required />
       <button type="submit">Continuar</button>
     </form>
   </div>
@@ -77,11 +85,12 @@
     const database = firebase.database();
     const solicitacoesRef = database.ref("solicitacoes");
 
-    // Elementos
     const userInfoSection = document.getElementById("userInfoSection");
     const userInfoForm = document.getElementById("userInfoForm");
     const nomeUsuarioInput = document.getElementById("nomeUsuario");
     const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
+    const dataRetiradaInput = document.getElementById("dataRetirada");
+    const dataDevolucaoInput = document.getElementById("dataDevolucao");
 
     const solicitacaoSection = document.getElementById("solicitacaoSection");
     const itemForm = document.getElementById("itemForm");
@@ -108,7 +117,10 @@
     window.addEventListener("load", () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
-      if (nome && departamento) {
+      const retirada = localStorage.getItem("dataRetirada");
+      const devolucao = localStorage.getItem("dataDevolucao");
+
+      if (nome && departamento && retirada && devolucao) {
         mostrarSolicitacaoSection();
       } else {
         mostrarUserInfoSection();
@@ -119,26 +131,28 @@
       e.preventDefault();
       const nome = nomeUsuarioInput.value.trim();
       const departamento = departamentoUsuarioInput.value.trim();
+      const retirada = dataRetiradaInput.value;
+      const devolucao = dataDevolucaoInput.value;
 
-      if (!nome || !departamento) {
-        alert("Por favor, preencha nome e departamento.");
+      if (!nome || !departamento || !retirada || !devolucao) {
+        alert("Preencha todos os campos.");
         return;
       }
 
       localStorage.setItem("nomeUsuario", nome);
       localStorage.setItem("departamentoUsuario", departamento);
+      localStorage.setItem("dataRetirada", retirada);
+      localStorage.setItem("dataDevolucao", devolucao);
       mostrarSolicitacaoSection();
     });
 
     btnLogout.addEventListener("click", () => {
-      localStorage.removeItem("nomeUsuario");
-      localStorage.removeItem("departamentoUsuario");
+      localStorage.clear();
       itensSolicitados = [];
       atualizarListaTemporaria();
       mostrarUserInfoSection();
     });
 
-    // Incluir item na lista temporária
     itemForm.addEventListener("submit", (e) => {
       e.preventDefault();
 
@@ -155,7 +169,6 @@
       atualizarListaTemporaria();
     });
 
-    // Atualiza lista com botão de remover
     function atualizarListaTemporaria() {
       itensTemporarios.innerHTML = "";
       itensSolicitados.forEach((obj, index) => {
@@ -182,10 +195,11 @@
       });
     }
 
-    // Envia solicitação para o Firebase
     btnFinalizar.addEventListener("click", () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
+      const retirada = localStorage.getItem("dataRetirada");
+      const devolucao = localStorage.getItem("dataDevolucao");
 
       if (itensSolicitados.length === 0) {
         alert("Inclua pelo menos um item antes de finalizar.");
@@ -195,6 +209,8 @@
       const novaSolicitacao = {
         solicitante: nome,
         departamento: departamento,
+        dataRetirada: retirada,
+        dataDevolucao: devolucao,
         itens: itensSolicitados,
         data: new Date().toLocaleString()
       };
@@ -207,18 +223,17 @@
       setTimeout(() => mensagemSucesso.textContent = "", 4000);
     });
 
-    // Exibe todas as solicitações já salvas
     solicitacoesRef.on("value", (snapshot) => {
       listaSolicitacoes.innerHTML = "";
 
       snapshot.forEach((childSnapshot) => {
         const s = childSnapshot.val();
-        const li = document.createElement("li");
         const itensFormatados = s.itens
           ? s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")
           : `${s.item} (${s.quantidade})`;
 
-        li.textContent = `${s.solicitante} (${s.departamento}) - ${itensFormatados} - ${s.data}`;
+        const li = document.createElement("li");
+        li.textContent = `${s.solicitante} (${s.departamento}) - ${itensFormatados} | Retirada: ${s.dataRetirada} | Devolução: ${s.dataDevolucao} | Criado em: ${s.data}`;
         listaSolicitacoes.appendChild(li);
       });
     });
