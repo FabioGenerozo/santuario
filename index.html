@@ -14,15 +14,20 @@
       background: #f9f9f9;
     }
     header {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 15px;
       margin-bottom: 20px;
     }
     header img {
-      max-height: 80px;
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
     }
     header h1 {
       font-size: 1.5em;
-      margin: 10px 0 0;
+      margin: 0;
+      color: #333;
     }
     input, button {
       margin: 5px 0;
@@ -72,7 +77,7 @@
 </head>
 <body>
   <header>
-    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo">
+    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo do Patrimônio" />
     <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
   </header>
 
@@ -230,67 +235,61 @@
       e.preventDefault();
 
       const item = itemSolicitadoInput.value.trim();
-      const quantidade = parseInt(quantidadeSolicitadaInput.value);
+      const quantidade = parseInt(quantidadeSolicitadaInput.value, 10);
 
       if (!item || !quantidade || quantidade < 1) {
-        alert("Preencha item e quantidade corretamente.");
+        alert("Informe um item e uma quantidade válida.");
         return;
       }
 
-      if (!estoqueAtual[item]) {
-        alert("Este item não existe no estoque.");
+      const estoqueDoItem = estoqueAtual[item];
+      if (estoqueDoItem === undefined) {
+        alert("Item não está no estoque.");
         return;
       }
 
-      if (quantidade > estoqueAtual[item]) {
-        alert(`Quantidade solicitada maior que a disponível no estoque (${estoqueAtual[item]}).`);
+      // Soma quantidade já solicitada temporariamente desse item
+      const jaSolicitado = itensSolicitados.reduce((acc, cur) => {
+        return cur.item === item ? acc + cur.quantidade : acc;
+      }, 0);
+
+      if (quantidade + jaSolicitado > estoqueDoItem) {
+        alert("Quantidade solicitada maior que o estoque disponível.");
         return;
       }
 
-      itensSolicitados.push({ item, quantidade });
-      itemForm.reset();
+      // Se item já está na lista temporária, soma quantidade
+      const indiceExistente = itensSolicitados.findIndex(i => i.item === item);
+      if (indiceExistente >= 0) {
+        itensSolicitados[indiceExistente].quantidade += quantidade;
+      } else {
+        itensSolicitados.push({ item, quantidade });
+      }
+
       atualizarListaTemporaria();
+
+      itemSolicitadoInput.value = "";
+      quantidadeSolicitadaInput.value = "";
     });
 
     function atualizarListaTemporaria() {
       itensTemporarios.innerHTML = "";
-      itensSolicitados.forEach((obj, index) => {
+      itensSolicitados.forEach(({ item, quantidade }, index) => {
         const li = document.createElement("li");
-        li.textContent = `${obj.item} - ${obj.quantidade}`;
-
+        li.textContent = `${item} — Quantidade: ${quantidade}`;
         const btnRemover = document.createElement("button");
-        btnRemover.textContent = "Remover";
+        btnRemover.textContent = "X";
         btnRemover.classList.add("remove-btn");
         btnRemover.addEventListener("click", () => {
           itensSolicitados.splice(index, 1);
           atualizarListaTemporaria();
         });
-
         li.appendChild(btnRemover);
         itensTemporarios.appendChild(li);
       });
     }
 
-    async function gerarPDF(solicitacao) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(14);
-      doc.text("Solicitação de Itens", 10, 10);
-      doc.text(`Nome: ${solicitacao.nome}`, 10, 20);
-      doc.text(`Departamento: ${solicitacao.departamento}`, 10, 30);
-      doc.text(`Retirada: ${solicitacao.dataRetirada}`, 10, 40);
-      doc.text(`Devolução: ${solicitacao.dataDevolucao}`, 10, 50);
-
-      let y = 60;
-      solicitacao.itens.forEach(({ item, quantidade }) => {
-        doc.text(`- ${item}: ${quantidade}`, 10, y);
-        y += 10;
-      });
-
-      doc.save(`solicitacao-${solicitacao.numero}.pdf`);
-    }
-
-    btnFinalizar.addEventListener("click", async () => {
+    btnFinalizar.addEventListener("click", () => {
       if (itensSolicitados.length === 0) {
         alert("Adicione pelo menos um item na solicitação.");
         return;
@@ -301,55 +300,100 @@
       const retirada = localStorage.getItem("dataRetirada");
       const devolucao = localStorage.getItem("dataDevolucao");
 
-      // Geração sequencial de número
-      const snapshot = await solicitacoesRef.once("value");
-      const total = snapshot.numChildren() + 1;
-      const numero = total.toString().padStart(4, "0");
+      const contadorRef = database.ref("contadorSolicitacoes");
 
-      const novaSolicitacao = {
-        nome,
-        departamento,
-        dataRetirada: retirada,
-        dataDevolucao: devolucao,
-        itens: itensSolicitados,
-        numero,
-        timestamp: Date.now()
-      };
+      contadorRef.transaction((contadorAtual) => {
+        return (contadorAtual || 0) + 1;
+      }, (error, committed, snapshot) => {
+        if (error) {
+          alert("Erro ao gerar número sequencial.");
+        } else if (committed) {
+          const numeroSequencial = String(snapshot.val()).padStart(4, '0');
+          const solicitacaoKey = database.ref("solicitacoes").push().key;
 
-      const updates = {};
-      itensSolicitados.forEach(({ item, quantidade }) => {
-        const estoqueAtualItem = estoqueAtual[item] || 0;
-        updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+          const novaSolicitacao = {
+            numero: numeroSequencial,
+            nome,
+            departamento,
+            dataRetirada: retirada,
+            dataDevolucao: devolucao,
+            itens: itensSolicitados,
+            timestamp: Date.now()
+          };
+
+          const updates = {};
+
+          itensSolicitados.forEach(({ item, quantidade }) => {
+            const estoqueAtualItem = estoqueAtual[item] || 0;
+            updates[`estoque/${item}`] = estoqueAtualItem - quantidade;
+          });
+
+          updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
+
+          database.ref().update(updates)
+            .then(() => {
+              mensagemSucesso.textContent = "Solicitação finalizada com sucesso!";
+              gerarPDF(novaSolicitacao);
+              itensSolicitados = [];
+              atualizarListaTemporaria();
+              carregarSolicitacoes();
+            })
+            .catch((error) => {
+              alert("Erro ao salvar solicitação: " + error.message);
+            });
+        }
       });
-
-      const solicitacaoKey = solicitacoesRef.push().key;
-      updates[`solicitacoes/${solicitacaoKey}`] = novaSolicitacao;
-
-      database.ref().update(updates)
-        .then(() => {
-          mensagemSucesso.textContent = `Solicitação ${numero} finalizada com sucesso!`;
-          gerarPDF(novaSolicitacao);
-          itensSolicitados = [];
-          atualizarListaTemporaria();
-          carregarSolicitacoes();
-        })
-        .catch((error) => {
-          alert("Erro ao finalizar solicitação: " + error.message);
-        });
     });
 
     function carregarSolicitacoes() {
-      solicitacoesRef.once("value", (snapshot) => {
-        const solicitacoes = snapshot.val() || {};
-        listaSolicitacoes.innerHTML = "";
+      listaSolicitacoes.innerHTML = "";
+      solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
 
-        Object.entries(solicitacoes).forEach(([key, solic]) => {
+        // Ordenar por número sequencial crescente
+        const ord = Object.values(data).sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
+
+        ord.forEach((sol) => {
           const li = document.createElement("li");
-          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
-          li.textContent = `#${solic.numero} - ${solic.nome} - ${solic.departamento} - Retirada: ${solic.dataRetirada} - Devolução: ${solic.dataDevolucao} - Itens: ${itensTexto}`;
+          li.textContent = `Nº ${sol.numero} - ${sol.nome} - ${sol.departamento} - Retirada: ${sol.dataRetirada} - Devolução: ${sol.dataDevolucao}`;
           listaSolicitacoes.appendChild(li);
         });
       });
+    }
+
+    function gerarPDF(solicitacao) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const logoUrl = "https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1";
+
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = logoUrl;
+      img.onload = function () {
+        doc.addImage(img, "JPEG", 10, 10, 25, 25);
+
+        doc.setFontSize(14);
+        doc.text("PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA", 40, 20);
+
+        doc.setFontSize(12);
+        doc.text(`Nº Solicitação: ${solicitacao.numero}`, 10, 40);
+        doc.text(`Nome: ${solicitacao.nome}`, 10, 50);
+        doc.text(`Departamento: ${solicitacao.departamento}`, 10, 60);
+        doc.text(`Data Retirada: ${solicitacao.dataRetirada}`, 10, 70);
+        doc.text(`Data Devolução: ${solicitacao.dataDevolucao}`, 10, 80);
+
+        let y = 90;
+        doc.text("Itens Solicitados:", 10, y);
+        y += 10;
+        solicitacao.itens.forEach((item, index) => {
+          doc.text(`${index + 1}. ${item.item} - ${item.quantidade}`, 10, y);
+          y += 10;
+        });
+
+        doc.save(`Solicitacao_${solicitacao.numero}.pdf`);
+      };
     }
 
     carregarSolicitacoes();
