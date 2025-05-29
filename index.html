@@ -194,6 +194,22 @@
       });
     }
 
+    async function obterProximoNumeroSolicitacao() {
+      const contadorRef = database.ref("contadorSolicitacoes");
+
+      const snapshot = await contadorRef.once("value");
+      let numeroAtual = snapshot.val();
+
+      if (numeroAtual === null) {
+        numeroAtual = 1;
+      } else {
+        numeroAtual += 1;
+      }
+
+      await contadorRef.set(numeroAtual);
+      return numeroAtual;
+    }
+
     btnFinalizar.addEventListener("click", async () => {
       const nome = localStorage.getItem("nomeUsuario");
       const departamento = localStorage.getItem("departamentoUsuario");
@@ -205,7 +221,11 @@
         return;
       }
 
+      const numeroSolicitacao = await obterProximoNumeroSolicitacao();
+      const numeroFormatado = String(numeroSolicitacao).padStart(4, "0");
+
       const novaSolicitacao = {
+        numero: numeroFormatado,
         solicitante: nome,
         departamento: departamento,
         dataRetirada: retirada,
@@ -222,21 +242,21 @@
       doc.setFontSize(16);
       doc.text("Solicitação de Itens", 15, 20);
       doc.setFontSize(12);
-      doc.text(`Solicitante: ${nome}`, 15, 35);
-      doc.text(`Departamento: ${departamento}`, 15, 45);
-      doc.text(`Data de Retirada: ${retirada}`, 15, 55);
-      doc.text(`Data de Devolução: ${devolucao}`, 15, 65);
-      doc.text(`Data da Solicitação: ${novaSolicitacao.data}`, 15, 75);
-      doc.text("Itens Solicitados:", 15, 90);
-      let y = 100;
+      doc.text(`Nº ${numeroFormatado}`, 15, 30);
+      doc.text(`Solicitante: ${nome}`, 15, 40);
+      doc.text(`Departamento: ${departamento}`, 15, 50);
+      doc.text(`Data de Retirada: ${retirada}`, 15, 60);
+      doc.text(`Data de Devolução: ${devolucao}`, 15, 70);
+      doc.text(`Data da Solicitação: ${novaSolicitacao.data}`, 15, 80);
+      doc.text("Itens Solicitados:", 15, 95);
+      let y = 105;
       itensSolicitados.forEach((item) => {
         doc.text(`- ${item.item} (Quantidade: ${item.quantidade})`, 20, y);
         y += 10;
       });
 
-      doc.save(`solicitacao_${nome.replace(/\s+/g, "_")}.pdf`);
+      doc.save(`solicitacao_${numeroFormatado}.pdf`);
 
-      // Limpa dados
       itensSolicitados = [];
       localStorage.clear();
       atualizarListaTemporaria();
@@ -253,7 +273,7 @@
           : `${s.item} (${s.quantidade})`;
 
         const li = document.createElement("li");
-        li.textContent = `${s.solicitante} (${s.departamento}) - ${itensFormatados} | Retirada: ${s.dataRetirada} | Devolução: ${s.dataDevolucao} | Criado em: ${s.data}`;
+        li.textContent = `#${s.numero} - ${s.solicitante} (${s.departamento}) - ${itensFormatados} | Retirada: ${s.dataRetirada} | Devolução: ${s.dataDevolucao} | Criado em: ${s.data}`;
         listaSolicitacoes.appendChild(li);
       });
     });
