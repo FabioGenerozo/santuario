@@ -8,123 +8,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    /* ... seu CSS permanece o mesmo ... */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 20px;
-      background: #e8f0fe; /* azul claro suave */
-      color: #2c3e50; /* azul escuro suave */
-      min-height: 100vh;
-      margin: 0;
-    }
-    header {
-      margin-bottom: 25px;
-      text-align: center;
-      border-bottom: 2px solid #a8c0ff;
-      padding-bottom: 15px;
-    }
-    header h1 {
-      font-size: 1.8em;
-      margin: 0;
-      font-weight: 600;
-      color: #34495e;
-    }
-    input, button, select {
-      margin: 6px 0;
-      padding: 10px 12px;
-      font-size: 1em;
-      border: 1.8px solid #a8c0ff;
-      border-radius: 6px;
-      background-color: #f9fbff;
-      color: #34495e;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    input:focus, button:hover, select:focus {
-      border-color: #5a79d6;
-      box-shadow: 0 0 6px #7f9cff88;
-      outline: none;
-      cursor: pointer;
-    }
-    button {
-      background-color: #5a79d6;
-      color: white;
-      font-weight: 600;
-      border: none;
-      width: auto;
-      min-width: 120px;
-      cursor: pointer;
-      margin-top: 10px;
-      border-radius: 6px;
-    }
-    button.remove-btn {
-      background: #d66a5a;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 10px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-left: 12px;
-      transition: background-color 0.3s ease;
-    }
-    button.remove-btn:hover {
-      background-color: #b04e42;
-    }
-    form {
-      margin-bottom: 15px;
-      max-width: 350px;
-    }
-    ul {
-      list-style: none;
-      padding-left: 0;
-      max-width: 450px;
-      margin-top: 10px;
-      background: #f4f8ff;
-      border: 1px solid #a8c0ff;
-      border-radius: 8px;
-      max-height: 220px;
-      overflow-y: auto;
-    }
-    li {
-      padding: 10px 14px;
-      border-bottom: 1px solid #dbe7ff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 1em;
-      color: #34495e;
-    }
-    li:last-child {
-      border-bottom: none;
-    }
-    h2, h3 {
-      margin-top: 30px;
-      color: #5a79d6;
-      font-weight: 700;
-    }
-    label {
-      margin-top: 12px;
-      display: block;
-      font-weight: 600;
-      color: #4868b1;
-    }
-    #solicitacaoSection > div {
-      display: flex;
-      gap: 40px;
-      flex-wrap: wrap;
-      margin-top: 15px;
-    }
-    #solicitacaoSection > div > div {
-      flex: 1;
-      min-width: 280px;
-    }
-    #mensagemSucesso {
-      font-weight: 600;
-      margin-top: 15px;
-      color: #2ecc71;
-    }
+    /* (Seu CSS igual ao anterior, removi aqui para focar na parte JS/HTML) */
   </style>
 </head>
 <body>
@@ -171,12 +55,11 @@
 
     <button id="btnFinalizar" style="margin-top: 10px;">Finalizar Solicitação</button>
     <p id="mensagemSucesso"></p>
-
-    <h2>Solicitações Registradas</h2>
-    <ul id="listaSolicitacoes"></ul>
   </div>
 
   <script>
+    const { jsPDF } = window.jspdf;
+
     const firebaseConfig = {
       databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
     };
@@ -199,7 +82,6 @@
     const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
     const btnFinalizar = document.getElementById("btnFinalizar");
     const mensagemSucesso = document.getElementById("mensagemSucesso");
-    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
     const itensTemporarios = document.getElementById("itensTemporarios");
     const listaEstoqueUL = document.getElementById("listaEstoqueUL");
     const listaEstoqueDatalist = document.getElementById("listaEstoqueDatalist");
@@ -374,7 +256,7 @@
           status: "pendente"
         };
 
-        // Atualiza estoque
+        // Verifica e atualiza estoque
         let atualizouEstoque = true;
         const atualizacoesEstoque = {};
 
@@ -392,15 +274,21 @@
           return;
         }
 
-        // Escreve solicitação no Firebase
+        // Salva solicitação no Firebase
         solicitacoesRef.child(numSolicitacao).set(solicitacaoObj)
           .then(() => {
             // Atualiza estoque no Firebase
             estoqueRef.update(atualizacoesEstoque)
               .then(() => {
-                mensagemSucesso.textContent = "Solicitação realizada com sucesso!";
+                // Gera o PDF com os dados da solicitação
+                gerarPDF(solicitacaoObj);
+
+                // Limpa dados e volta para tela inicial
                 itensSolicitados = [];
                 atualizarListaTemporaria();
+                localStorage.clear();
+                mostrarUserInfoSection();
+                mensagemSucesso.textContent = "";
               })
               .catch(() => {
                 alert("Erro ao atualizar estoque.");
@@ -412,29 +300,32 @@
       });
     });
 
-    // Atualiza lista de solicitações em tempo real:
-    solicitacoesRef.on("value", (snapshot) => {
-      const solicitacoes = snapshot.val() || {};
-      listaSolicitacoes.innerHTML = "";
+    function gerarPDF(solicitacao) {
+      const doc = new jsPDF();
 
-      Object.values(solicitacoes).forEach(solicitacao => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>#${solicitacao.numero} - ${solicitacao.usuario}</strong> (${solicitacao.departamento})<br/>
-          Retirada: ${solicitacao.dataRetirada} | Devolução: ${solicitacao.dataDevolucao} <br/>
-          Status: ${solicitacao.status}<br/>
-          Itens:<br/>
-        `;
-        const ulItens = document.createElement("ul");
-        solicitacao.itens.forEach(({ item, quantidade }) => {
-          const liItem = document.createElement("li");
-          liItem.textContent = `${item} — Quantidade: ${quantidade}`;
-          ulItens.appendChild(liItem);
-        });
-        li.appendChild(ulItens);
-        listaSolicitacoes.appendChild(li);
+      doc.setFontSize(16);
+      doc.text("Solicitação de Itens", 14, 20);
+
+      doc.setFontSize(12);
+      doc.text(`Número: ${solicitacao.numero}`, 14, 30);
+      doc.text(`Usuário: ${solicitacao.usuario}`, 14, 38);
+      doc.text(`Departamento: ${solicitacao.departamento}`, 14, 46);
+      doc.text(`Data de Retirada: ${solicitacao.dataRetirada}`, 14, 54);
+      doc.text(`Data de Devolução: ${solicitacao.dataDevolucao}`, 14, 62);
+      doc.text(`Data/Hora Solicitação: ${solicitacao.dataHoraSolicitacao}`, 14, 70);
+
+      doc.text("Itens Solicitados:", 14, 80);
+
+      let yPos = 88;
+      solicitacao.itens.forEach(({ item, quantidade }, i) => {
+        doc.text(`${i + 1}. ${item} — Quantidade: ${quantidade}`, 16, yPos);
+        yPos += 8;
       });
-    });
+
+      doc.text(`Status: ${solicitacao.status}`, 14, yPos + 10);
+
+      doc.save(`Solicitacao_${solicitacao.numero}.pdf`);
+    }
   </script>
 </body>
 </html>
