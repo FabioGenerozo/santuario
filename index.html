@@ -1,346 +1,129 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Solicitação de Itens com Estoque</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <title>Gerenciamento de Estoque - Firebase Modular</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 10px;
     }
-    input, button {
+    label, input, button {
+      display: block;
       margin: 5px 0;
-      padding: 8px;
-      font-size: 1em;
-    }
-    form {
-      margin-bottom: 10px;
     }
     ul {
       list-style: none;
       padding-left: 0;
     }
     li {
-      background: #fff;
+      padding: 6px 10px;
       border: 1px solid #ccc;
-      margin: 5px 0;
-      padding: 8px;
-      border-radius: 4px;
-    }
-    h2, h3 {
-      margin-top: 20px;
-    }
-    label {
-      display: block;
-      margin-top: 8px;
-    }
-    #solicitacaoSection > div {
+      margin-bottom: 5px;
       display: flex;
-      gap: 40px;
-      flex-wrap: wrap;
-    }
-    #solicitacaoSection > div > div {
-      flex: 1;
-      min-width: 250px;
+      justify-content: space-between;
+      align-items: center;
     }
     button.remove-btn {
-      margin-left: 10px;
-      background: #ef4444;
-      color: white;
+      background-color: #e74c3c;
       border: none;
-      border-radius: 4px;
+      color: white;
       padding: 4px 8px;
       cursor: pointer;
+      border-radius: 3px;
     }
   </style>
 </head>
 <body>
-  <h1>Solicitação de Itens</h1>
+  <h1>Gerenciamento de Estoque</h1>
 
-  <div id="userInfoSection">
-    <form id="userInfoForm">
-      <input type="text" id="nomeUsuario" placeholder="Seu nome" required />
-      <input type="text" id="departamentoUsuario" placeholder="Departamento" required />
-      <label>Data de Retirada:</label>
-      <input type="date" id="dataRetirada" required />
-      <label>Data de Devolução:</label>
-      <input type="date" id="dataDevolucao" required />
-      <button type="submit">Continuar</button>
-    </form>
-  </div>
+  <h2>Adicionar Item no Estoque</h2>
+  <form id="formAddItem">
+    <label for="itemName">Nome do Item:</label>
+    <input type="text" id="itemName" required />
 
-  <div id="solicitacaoSection" style="display:none;">
-    <button id="btnLogout">Sair / Trocar usuário</button>
+    <label for="itemQuantity">Quantidade:</label>
+    <input type="number" id="itemQuantity" min="1" required />
 
-    <h2>Solicitar Itens</h2>
+    <button type="submit">Adicionar / Atualizar Estoque</button>
+  </form>
 
-    <div>
-      <div>
-        <form id="itemForm">
-          <input type="text" id="itemSolicitado" placeholder="Item desejado" list="listaEstoque" autocomplete="off" required />
-          <datalist id="listaEstoque"></datalist>
-          <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required min="1" />
-          <button type="submit">Incluir</button>
-        </form>
+  <h2>Estoque Atual</h2>
+  <ul id="listaEstoque">Carregando...</ul>
 
-        <h3>Itens da Solicitação</h3>
-        <ul id="itensTemporarios"></ul>
-      </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-      <div>
-        <h3>Itens em Estoque</h3>
-        <ul id="listaEstoque"></ul>
-      </div>
-    </div>
-
-    <button id="btnFinalizar" style="margin-top: 10px;">Finalizar Solicitação</button>
-    <p id="mensagemSucesso" style="color: green;"></p>
-
-    <h2>Solicitações Registradas</h2>
-    <ul id="listaSolicitacoes"></ul>
-  </div>
-
-  <script>
+    // Config Firebase
     const firebaseConfig = {
-      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
+      apiKey: "AIzaSyDSeNk5WczGLONBwfHdez8ka7VI9s0OKzc",
+      authDomain: "patrimonio-santuario-bjp.firebaseapp.com",
+      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com",
+      projectId: "patrimonio-santuario-bjp",
+      storageBucket: "patrimonio-santuario-bjp.firebasestorage.app",
+      messagingSenderId: "211993634053",
+      appId: "1:211993634053:web:855b4c8f339b5ea8d3836c",
+      measurementId: "G-KXH2XJ9QEJ"
     };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
 
-    const solicitacoesRef = database.ref("solicitacoes");
-    const estoqueRef = database.ref("estoque");
+    // Inicializa Firebase
+    const app = initializeApp(firebaseConfig);
+    getAnalytics(app);
 
-    const userInfoSection = document.getElementById("userInfoSection");
-    const userInfoForm = document.getElementById("userInfoForm");
-    const nomeUsuarioInput = document.getElementById("nomeUsuario");
-    const departamentoUsuarioInput = document.getElementById("departamentoUsuario");
-    const dataRetiradaInput = document.getElementById("dataRetirada");
-    const dataDevolucaoInput = document.getElementById("dataDevolucao");
+    const db = getDatabase(app);
+    const estoqueRef = ref(db, 'estoque');
+    const listaEstoque = document.getElementById('listaEstoque');
 
-    const solicitacaoSection = document.getElementById("solicitacaoSection");
-    const itemForm = document.getElementById("itemForm");
-    const itemSolicitadoInput = document.getElementById("itemSolicitado");
-    const quantidadeSolicitadaInput = document.getElementById("quantidadeSolicitada");
-    const btnFinalizar = document.getElementById("btnFinalizar");
-    const mensagemSucesso = document.getElementById("mensagemSucesso");
-    const listaSolicitacoes = document.getElementById("listaSolicitacoes");
-    const itensTemporarios = document.getElementById("itensTemporarios");
-    const listaEstoqueUL = document.getElementById("listaEstoque");
-    const listaEstoqueDatalist = document.getElementById("listaEstoque");
-    const btnLogout = document.getElementById("btnLogout");
+    // Atualiza a lista do estoque quando mudar no Firebase
+    onValue(estoqueRef, snapshot => {
+      const estoque = snapshot.val();
+      listaEstoque.innerHTML = '';
 
-    let itensSolicitados = [];
-    let estoqueAtual = {};
+      if (estoque) {
+        Object.entries(estoque).forEach(([item, quantidade]) => {
+          const li = document.createElement('li');
+          li.textContent = `${item}: ${quantidade}`;
 
-    function mostrarSolicitacaoSection() {
-      userInfoSection.style.display = "none";
-      solicitacaoSection.style.display = "block";
-    }
+          // Botão remover item do estoque
+          const btnRemove = document.createElement('button');
+          btnRemove.textContent = 'Remover';
+          btnRemove.className = 'remove-btn';
+          btnRemove.onclick = () => {
+            // Remove o item do banco
+            update(ref(db, 'estoque/' + item), null);
+          };
 
-    function mostrarUserInfoSection() {
-      userInfoSection.style.display = "block";
-      solicitacaoSection.style.display = "none";
-    }
-
-    window.addEventListener("load", () => {
-      const nome = localStorage.getItem("nomeUsuario");
-      const departamento = localStorage.getItem("departamentoUsuario");
-      const retirada = localStorage.getItem("dataRetirada");
-      const devolucao = localStorage.getItem("dataDevolucao");
-
-      if (nome && departamento && retirada && devolucao) {
-        mostrarSolicitacaoSection();
-      } else {
-        mostrarUserInfoSection();
-      }
-    });
-
-    userInfoForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const nome = nomeUsuarioInput.value.trim();
-      const departamento = departamentoUsuarioInput.value.trim();
-      const retirada = dataRetiradaInput.value;
-      const devolucao = dataDevolucaoInput.value;
-
-      if (!nome || !departamento || !retirada || !devolucao) {
-        alert("Preencha todos os campos.");
-        return;
-      }
-
-      localStorage.setItem("nomeUsuario", nome);
-      localStorage.setItem("departamentoUsuario", departamento);
-      localStorage.setItem("dataRetirada", retirada);
-      localStorage.setItem("dataDevolucao", devolucao);
-      mostrarSolicitacaoSection();
-    });
-
-    btnLogout.addEventListener("click", () => {
-      localStorage.clear();
-      itensSolicitados = [];
-      atualizarListaTemporaria();
-      mostrarUserInfoSection();
-    });
-
-    estoqueRef.on("value", (snapshot) => {
-      estoqueAtual = snapshot.val() || {};
-      atualizarListaEstoque(estoqueAtual);
-    });
-
-    function atualizarListaEstoque(estoque) {
-      listaEstoqueUL.innerHTML = "";
-      listaEstoqueDatalist.innerHTML = "";
-
-      for (const [item, quantidade] of Object.entries(estoque)) {
-        // Lista visível para o usuário
-        const li = document.createElement("li");
-        li.textContent = `${item} — Quantidade: ${quantidade}`;
-        listaEstoqueUL.appendChild(li);
-
-        // Datalist para autocompletar o input do item
-        const option = document.createElement("option");
-        option.value = item;
-        listaEstoqueDatalist.appendChild(option);
-      }
-    }
-
-    itemForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      const item = itemSolicitadoInput.value.trim();
-      const quantidade = parseInt(quantidadeSolicitadaInput.value);
-
-      if (!item || !quantidade || quantidade < 1) {
-        alert("Preencha item e quantidade corretamente.");
-        return;
-      }
-
-      if (!estoqueAtual[item]) {
-        alert("Este item não existe no estoque.");
-        return;
-      }
-
-      if (quantidade > estoqueAtual[item]) {
-        alert(`Quantidade solicitada maior que a disponível no estoque (${estoqueAtual[item]}).`);
-        return;
-      }
-
-      itensSolicitados.push({ item, quantidade });
-      itemForm.reset();
-      atualizarListaTemporaria();
-    });
-
-    function atualizarListaTemporaria() {
-      itensTemporarios.innerHTML = "";
-      itensSolicitados.forEach((obj, index) => {
-        const li = document.createElement("li");
-        li.textContent = `${obj.item} - ${obj.quantidade}`;
-
-        const btnRemover = document.createElement("button");
-        btnRemover.textContent = "❌ Remover";
-        btnRemover.classList.add("remove-btn");
-        btnRemover.addEventListener("click", () => {
-          itensSolicitados.splice(index, 1);
-          atualizarListaTemporaria();
+          li.appendChild(btnRemove);
+          listaEstoque.appendChild(li);
         });
-
-        li.appendChild(btnRemover);
-        itensTemporarios.appendChild(li);
-      });
-    }
-
-    async function obterProximoNumeroSolicitacao() {
-      const contadorRef = database.ref("contadorSolicitacoes");
-
-      const snapshot = await contadorRef.once("value");
-      let numeroAtual = snapshot.val();
-
-      if (numeroAtual === null) {
-        numeroAtual = 1;
       } else {
-        numeroAtual += 1;
+        listaEstoque.textContent = 'Nenhum item no estoque.';
       }
-
-      await contadorRef.set(numeroAtual);
-      return numeroAtual;
-    }
-
-    btnFinalizar.addEventListener("click", async () => {
-      const nome = localStorage.getItem("nomeUsuario");
-      const departamento = localStorage.getItem("departamentoUsuario");
-      const retirada = localStorage.getItem("dataRetirada");
-      const devolucao = localStorage.getItem("dataDevolucao");
-
-      if (itensSolicitados.length === 0) {
-        alert("Inclua pelo menos um item antes de finalizar.");
-        return;
-      }
-
-      const numeroSolicitacao = await obterProximoNumeroSolicitacao();
-      const numeroFormatado = String(numeroSolicitacao).padStart(4, "0");
-
-      const novaSolicitacao = {
-        numero: numeroFormatado,
-        solicitante: nome,
-        departamento: departamento,
-        dataRetirada: retirada,
-        dataDevolucao: devolucao,
-        itens: itensSolicitados,
-        data: new Date().toLocaleString()
-      };
-
-      // Salvar no Firebase
-      solicitacoesRef.push(novaSolicitacao);
-
-      // Gerar PDF
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(16);
-      doc.text("Solicitação de Itens", 15, 20);
-      doc.setFontSize(12);
-      doc.text(`Nº ${numeroFormatado}`, 15, 30);
-      doc.text(`Solicitante: ${nome}`, 15, 40);
-      doc.text(`Departamento: ${departamento}`, 15, 50);
-      doc.text(`Data de Retirada: ${retirada}`, 15, 60);
-      doc.text(`Data de Devolução: ${devolucao}`, 15, 70);
-      doc.text(`Data da Solicitação: ${novaSolicitacao.data}`, 15, 80);
-      doc.text("Itens Solicitados:", 15, 95);
-      let y = 105;
-      itensSolicitados.forEach((item) => {
-        doc.text(`- ${item.item} (Quantidade: ${item.quantidade})`, 20, y);
-        y += 10;
-      });
-
-      doc.save(`solicitacao_${numeroFormatado}.pdf`);
-
-      // Limpar estado
-      itensSolicitados = [];
-      atualizarListaTemporaria();
-      mensagemSucesso.textContent = "Solicitação finalizada e salva com sucesso!";
-      setTimeout(() => {
-        mensagemSucesso.textContent = "";
-      }, 5000);
-
-      // Voltar à tela inicial (trocar usuário)
-      localStorage.clear();
-      mostrarUserInfoSection();
     });
 
-    // Listar solicitações já feitas (opcional)
-    solicitacoesRef.on("value", (snapshot) => {
-      const solicitacoes = snapshot.val() || {};
-      listaSolicitacoes.innerHTML = "";
+    // Formulário para adicionar ou atualizar item no estoque
+    const formAddItem = document.getElementById('formAddItem');
+    formAddItem.addEventListener('submit', e => {
+      e.preventDefault();
+      const nome = document.getElementById('itemName').value.trim();
+      const qtd = parseInt(document.getElementById('itemQuantity').value);
 
-      Object.values(solicitacoes).forEach((sol) => {
-        const li = document.createElement("li");
-        li.textContent = `#${sol.numero} - ${sol.solicitante} - ${sol.departamento} - ${sol.data}`;
-        listaSolicitacoes.appendChild(li);
-      });
+      if (nome && qtd > 0) {
+        // Atualiza o estoque com o novo valor ou adiciona novo item
+        update(ref(db, 'estoque/' + nome), qtd)
+          .then(() => {
+            formAddItem.reset();
+          })
+          .catch(err => {
+            alert('Erro ao atualizar estoque: ' + err.message);
+          });
+      } else {
+        alert('Preencha corretamente o nome e quantidade!');
+      }
     });
   </script>
 </body>
