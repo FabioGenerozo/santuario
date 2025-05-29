@@ -6,42 +6,44 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 const estoqueRef = database.ref("estoque");
+const solicitacoesRef = database.ref("solicitacoes");
 
-// Adicionar item
-document.getElementById("itemForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-  const nome = document.getElementById("nome").value;
-  const quantidade = parseInt(document.getElementById("quantidade").value);
-
-  const novoItem = {
-    nome,
-    quantidade
-  };
-
-  estoqueRef.push(novoItem);
-
-  document.getElementById("itemForm").reset();
-});
-
-// Listar itens
+// Mostrar lista de estoque
 estoqueRef.on("value", (snapshot) => {
   const lista = document.getElementById("listaEstoque");
   lista.innerHTML = "";
 
   snapshot.forEach((childSnapshot) => {
-    const key = childSnapshot.key;
     const item = childSnapshot.val();
-
     const li = document.createElement("li");
     li.textContent = `${item.nome} - ${item.quantidade} unidades`;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Remover";
-    btn.onclick = () => {
-      estoqueRef.child(key).remove();
-    };
-
-    li.appendChild(btn);
     lista.appendChild(li);
   });
+});
+
+// Enviar solicitação de item
+document.getElementById("solicitarForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const solicitante = document.getElementById("solicitante").value;
+  const itemSolicitado = document.getElementById("itemSolicitado").value;
+  const quantidadeSolicitada = parseInt(document.getElementById("quantidadeSolicitada").value);
+  const observacao = document.getElementById("observacao").value;
+
+  const novaSolicitacao = {
+    solicitante,
+    item: itemSolicitado,
+    quantidade: quantidadeSolicitada,
+    observacao,
+    data: new Date().toLocaleString()
+  };
+
+  solicitacoesRef.push(novaSolicitacao);
+
+  document.getElementById("solicitarForm").reset();
+  document.getElementById("mensagemSucesso").textContent = "Solicitação enviada com sucesso!";
+
+  setTimeout(() => {
+    document.getElementById("mensagemSucesso").textContent = "";
+  }, 4000);
 });
