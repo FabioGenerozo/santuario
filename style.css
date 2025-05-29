@@ -20,14 +20,15 @@ h1, h2 {
 
 form {
   display: flex;
+  flex-direction: column;
   gap: 10px;
+  margin-top: 20px;
   margin-bottom: 20px;
 }
 
 form input, form button {
   padding: 10px;
   font-size: 16px;
-  flex: 1;
 }
 
 button {
@@ -41,22 +42,12 @@ button:hover {
   background-color: #4338ca;
 }
 
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
 li {
   padding: 10px;
   border-bottom: 1px solid #ddd;
-}
-
-li button {
-  float: right;
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  cursor: pointer;
-  font-size: 14px;
-  border-radius: 4px;
-}
-
-li button:hover {
-  background-color: #dc2626;
 }
