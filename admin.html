@@ -3,68 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
+  <title>Administração - PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      background-color: #f9f9f9;
+      background: #f5f5f5;
     }
     header {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 15px;
       margin-bottom: 20px;
     }
     header img {
-      height: 80px;
-      border-radius: 10px;
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
     }
     header h1 {
       font-size: 1.5em;
+      margin: 0;
       color: #333;
     }
-    input, button {
-      margin: 5px 0;
-      padding: 8px;
-      font-size: 1em;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      background: #fff;
+    th, td {
       border: 1px solid #ccc;
-      margin: 5px 0;
-      padding: 10px;
-      border-radius: 4px;
+      padding: 8px;
+      text-align: left;
     }
-    .btn {
-      padding: 6px 12px;
-      margin-top: 5px;
-      background-color: #4CAF50;
+    th {
+      background-color: #eee;
+    }
+    button {
+      padding: 5px 10px;
+      background-color: #ef4444;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
     }
-    .btn:hover {
-      background-color: #45a049;
+    #btnVoltar {
+      margin-bottom: 15px;
+      background-color: #2563eb;
     }
   </style>
 </head>
 <body>
-
   <header>
-    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo">
-    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
+    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo do Patrimônio" />
+    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA - Administração</h1>
   </header>
 
-  <h2>Devolução de Itens</h2>
-  <ul id="listaDevolucoes"></ul>
+  <button id="btnVoltar">← Voltar para Início</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Nº Solicitação</th>
+        <th>Nome</th>
+        <th>Departamento</th>
+        <th>Data Retirada</th>
+        <th>Data Devolução</th>
+        <th>Itens</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaSolicitacoesCorpo"></tbody>
+  </table>
 
   <script>
     const firebaseConfig = {
@@ -72,46 +84,106 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
+
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
 
-    const listaDevolucoes = document.getElementById("listaDevolucoes");
+    const tabelaCorpo = document.getElementById("tabelaSolicitacoesCorpo");
+    const btnVoltar = document.getElementById("btnVoltar");
 
-    solicitacoesRef.once("value").then(snapshot => {
-      const solicitacoes = snapshot.val();
-      if (!solicitacoes) return;
-
-      Object.entries(solicitacoes).forEach(([key, s]) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>#${s.numero}</strong> - ${s.solicitante} (${s.departamento})<br>
-          Retirada: ${s.dataRetirada} | Devolução: ${s.dataDevolucao}<br>
-          Itens: ${s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")}<br>
-        `;
-        const btn = document.createElement("button");
-        btn.textContent = "Registrar Devolução";
-        btn.className = "btn";
-        btn.onclick = () => registrarDevolucao(key, s.itens);
-        li.appendChild(btn);
-        listaDevolucoes.appendChild(li);
-      });
+    btnVoltar.addEventListener("click", () => {
+      window.location.href = "index.html";
     });
 
-    function registrarDevolucao(key, itens) {
-      estoqueRef.once("value").then(snapshot => {
-        const estoque = snapshot.val() || {};
-        const updates = {};
-        itens.forEach(({ item, quantidade }) => {
-          updates[`estoque/${item}`] = (estoque[item] || 0) + quantidade;
-        });
-        updates[`solicitacoes/${key}`] = null;
-        database.ref().update(updates).then(() => {
-          alert("Devolução registrada com sucesso!");
-          location.reload();
+    function carregarSolicitacoes() {
+      tabelaCorpo.innerHTML = "";
+      solicitacoesRef.orderByChild("timestamp").once("value", (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        // Ordenar por número sequencial crescente
+        const ord = Object.values(data).sort((a, b) => parseInt(a.numero) - parseInt(b.numero));
+
+        ord.forEach((sol) => {
+          const tr = document.createElement("tr");
+
+          const tdNumero = document.createElement("td");
+          tdNumero.textContent = sol.numero;
+          tr.appendChild(tdNumero);
+
+          const tdNome = document.createElement("td");
+          tdNome.textContent = sol.nome;
+          tr.appendChild(tdNome);
+
+          const tdDepto = document.createElement("td");
+          tdDepto.textContent = sol.departamento;
+          tr.appendChild(tdDepto);
+
+          const tdRetirada = document.createElement("td");
+          tdRetirada.textContent = sol.dataRetirada;
+          tr.appendChild(tdRetirada);
+
+          const tdDevolucao = document.createElement("td");
+          tdDevolucao.textContent = sol.dataDevolucao;
+          tr.appendChild(tdDevolucao);
+
+          const tdItens = document.createElement("td");
+          tdItens.innerHTML = sol.itens.map(i => `${i.item} (x${i.quantidade})`).join("<br>");
+          tr.appendChild(tdItens);
+
+          const tdAcao = document.createElement("td");
+          const btnDevolver = document.createElement("button");
+          btnDevolver.textContent = "Marcar Devolvido";
+          btnDevolver.addEventListener("click", () => {
+            confirmarDevolucao(sol);
+          });
+          tdAcao.appendChild(btnDevolver);
+          tr.appendChild(tdAcao);
+
+          tabelaCorpo.appendChild(tr);
         });
       });
     }
-  </script>
 
+    function confirmarDevolucao(solicitacao) {
+      if (!confirm(`Confirmar devolução da solicitação Nº ${solicitacao.numero}?`)) {
+        return;
+      }
+
+      // Remover a solicitação e devolver itens para estoque
+      solicitacoesRef.orderByChild("numero").equalTo(solicitacao.numero).once("value", snapshot => {
+        const dados = snapshot.val();
+        if (!dados) {
+          alert("Solicitação não encontrada.");
+          return;
+        }
+        // Pegando a chave da solicitação para remover
+        const key = Object.keys(dados)[0];
+
+        const updates = {};
+        // Atualizar estoque somando os itens devolvidos
+        solicitacao.itens.forEach(({ item, quantidade }) => {
+          const path = `estoque/${item}`;
+          estoqueRef.child(item).once("value", snap => {
+            const atual = snap.val() || 0;
+            updates[path] = atual + quantidade;
+
+            // Atualiza no banco e remove a solicitação só depois que todos itens estiverem atualizados
+            database.ref().update(updates)
+              .then(() => solicitacoesRef.child(key).remove())
+              .then(() => {
+                alert(`Solicitação Nº ${solicitacao.numero} devolvida com sucesso!`);
+                carregarSolicitacoes();
+              })
+              .catch(err => {
+                alert("Erro ao processar devolução: " + err.message);
+              });
+          });
+        });
+      });
+    }
+
+    carregarSolicitacoes();
+  </script>
 </body>
 </html>
