@@ -3,52 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Administração de Solicitações</title>
+  <title>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      background: #f1f1f1;
+      background-color: #f9f9f9;
     }
-    h1 {
+    header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
       margin-bottom: 20px;
+    }
+    header img {
+      height: 80px;
+      border-radius: 10px;
+    }
+    header h1 {
+      font-size: 1.5em;
+      color: #333;
+    }
+    input, button {
+      margin: 5px 0;
+      padding: 8px;
+      font-size: 1em;
     }
     ul {
       list-style: none;
-      padding-left: 0;
+      padding: 0;
     }
     li {
       background: #fff;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 10px;
       border: 1px solid #ccc;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
     }
-    button {
-      margin-top: 8px;
+    .btn {
       padding: 6px 12px;
-      font-size: 0.95em;
+      margin-top: 5px;
+      background-color: #4CAF50;
+      color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
     }
-    .btn-devolver {
-      background-color: #10b981;
-      color: white;
-    }
-    .btn-voltar {
-      background-color: #3b82f6;
-      color: white;
-      margin-bottom: 20px;
+    .btn:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-  <button class="btn-voltar" onclick="window.location.href='index.html'">← Voltar para Solicitações</button>
-  <h1>Administração de Solicitações</h1>
-  <ul id="listaAdmin"></ul>
+
+  <header>
+    <img src="https://instagram.fcgh30-1.fna.fbcdn.net/v/t51.2885-15/429483413_794453615836791_5497573259210612418_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_ht=instagram.fcgh30-1.fna.fbcdn.net&_nc_cat=103&_nc_oc=Q6cZ2QE5GEhz7hzttQZKNBqKtVUIenJWQ3WCrkvWBeXm-VUGj9LEpPx-Uuq8yHXzA6MCxPc&_nc_ohc=BV9S6_HLVWIQ7kNvwFYuV40&_nc_gid=spFsUo-LfBCgQLSLt4HS8g&edm=AGW0Xe4BAAAA&ccb=7-5&oh=00_AfJwCblyM9VkbZZdbtPPcZWQ3qOfB8K1HekYLvi_-zWuSA&oe=683EA72C&_nc_sid=94fea1" alt="Logo">
+    <h1>PATRIMÔNIO DO SANTUÁRIO BOM JESUS DE PIRAPORINHA</h1>
+  </header>
+
+  <h2>Devolução de Itens</h2>
+  <ul id="listaDevolucoes"></ul>
 
   <script>
     const firebaseConfig = {
@@ -56,60 +72,46 @@
     };
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
-
     const solicitacoesRef = database.ref("solicitacoes");
     const estoqueRef = database.ref("estoque");
-    const listaAdmin = document.getElementById("listaAdmin");
 
-    let estoqueAtual = {};
+    const listaDevolucoes = document.getElementById("listaDevolucoes");
 
-    estoqueRef.on("value", (snapshot) => {
-      estoqueAtual = snapshot.val() || {};
+    solicitacoesRef.once("value").then(snapshot => {
+      const solicitacoes = snapshot.val();
+      if (!solicitacoes) return;
+
+      Object.entries(solicitacoes).forEach(([key, s]) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>#${s.numero}</strong> - ${s.solicitante} (${s.departamento})<br>
+          Retirada: ${s.dataRetirada} | Devolução: ${s.dataDevolucao}<br>
+          Itens: ${s.itens.map(i => `${i.item} (${i.quantidade})`).join(", ")}<br>
+        `;
+        const btn = document.createElement("button");
+        btn.textContent = "Registrar Devolução";
+        btn.className = "btn";
+        btn.onclick = () => registrarDevolucao(key, s.itens);
+        li.appendChild(btn);
+        listaDevolucoes.appendChild(li);
+      });
     });
 
-    function carregarSolicitacoes() {
-      solicitacoesRef.once("value", (snapshot) => {
-        const solicitacoes = snapshot.val() || {};
-        listaAdmin.innerHTML = "";
-
-        Object.entries(solicitacoes).forEach(([key, solic]) => {
-          const li = document.createElement("li");
-          const itensTexto = solic.itens.map(i => `${i.item} (${i.quantidade})`).join(", ");
-
-          li.innerHTML = `
-            <strong>${solic.solicitante}</strong> - ${solic.departamento}<br />
-            Retirada: ${solic.dataRetirada} | Devolução: ${solic.dataDevolucao}<br />
-            Itens: ${itensTexto}<br />
-            <button class="btn-devolver" onclick="devolverItens('${key}', ${JSON.stringify(solic.itens).replace(/"/g, '&quot;')})">Registrar Devolução</button>
-          `;
-
-          listaAdmin.appendChild(li);
+    function registrarDevolucao(key, itens) {
+      estoqueRef.once("value").then(snapshot => {
+        const estoque = snapshot.val() || {};
+        const updates = {};
+        itens.forEach(({ item, quantidade }) => {
+          updates[`estoque/${item}`] = (estoque[item] || 0) + quantidade;
+        });
+        updates[`solicitacoes/${key}`] = null;
+        database.ref().update(updates).then(() => {
+          alert("Devolução registrada com sucesso!");
+          location.reload();
         });
       });
     }
-
-    function devolverItens(chave, itens) {
-      if (!confirm("Confirmar devolução e reposição dos itens ao estoque?")) return;
-
-      const updates = {};
-      itens.forEach(({ item, quantidade }) => {
-        const atual = estoqueAtual[item] || 0;
-        updates[`estoque/${item}`] = atual + quantidade;
-      });
-
-      updates[`solicitacoes/${chave}`] = null;
-
-      database.ref().update(updates)
-        .then(() => {
-          alert("Itens devolvidos e estoque atualizado.");
-          carregarSolicitacoes();
-        })
-        .catch((error) => {
-          alert("Erro ao devolver itens: " + error.message);
-        });
-    }
-
-    carregarSolicitacoes();
   </script>
+
 </body>
 </html>
