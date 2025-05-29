@@ -10,16 +10,19 @@
 </head>
 <body>
   <div class="container">
-    <h1>Gerenciamento de Estoque</h1>
+    <h1>Estoque Disponível</h1>
+    <ul id="listaEstoque"></ul>
 
-    <form id="itemForm">
-      <input type="text" id="nome" placeholder="Nome do item" required />
-      <input type="number" id="quantidade" placeholder="Quantidade" required />
-      <button type="submit">Adicionar</button>
+    <h2>Solicitar Itens</h2>
+    <form id="solicitarForm">
+      <input type="text" id="solicitante" placeholder="Seu nome" required />
+      <input type="text" id="itemSolicitado" placeholder="Nome do item" required />
+      <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required />
+      <input type="text" id="observacao" placeholder="Observação (opcional)" />
+      <button type="submit">Enviar Solicitação</button>
     </form>
 
-    <h2>Itens cadastrados</h2>
-    <ul id="listaEstoque"></ul>
+    <p id="mensagemSucesso" style="color: green;"></p>
   </div>
 
   <script src="script.js"></script>
