@@ -2,9 +2,64 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Estoque - Santuario BJP</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    form input, form button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #4338ca;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    #listaSolicitacoes li {
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #f9fafb;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+  </style>
+
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -15,16 +70,92 @@
 
     <h2>Solicitar Itens</h2>
     <form id="solicitarForm">
-      <input type="text" id="solicitante" placeholder="Seu nome" required />
-      <input type="text" id="itemSolicitado" placeholder="Nome do item" required />
+      <input type="text" id="solicitante" placeholder="Nome do solicitante" required />
+      <input type="text" id="departamento" placeholder="Departamento" required />
+      <input type="text" id="itemSolicitado" placeholder="Item desejado" required />
       <input type="number" id="quantidadeSolicitada" placeholder="Quantidade" required />
-      <input type="text" id="observacao" placeholder="Observação (opcional)" />
-      <button type="submit">Enviar Solicitação</button>
+      <button type="submit">Finalizar Solicitação</button>
     </form>
-
     <p id="mensagemSucesso" style="color: green;"></p>
+
+    <h2>Solicitações Registradas</h2>
+    <ul id="listaSolicitacoes"></ul>
   </div>
 
-  <script src="script.js"></script>
+  <script>
+    // Configuração Firebase
+    const firebaseConfig = {
+      databaseURL: "https://patrimonio-santuario-bjp-default-rtdb.firebaseio.com/"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const estoqueRef = database.ref("estoque");
+    const solicitacoesRef = database.ref("solicitacoes");
+
+    // Exibir estoque
+    estoqueRef.on("value", (snapshot) => {
+      const lista = document.getElementById("listaEstoque");
+      if (lista) {
+        lista.innerHTML = "";
+        snapshot.forEach((childSnapshot) => {
+          const item = childSnapshot.val();
+          const li = document.createElement("li");
+          li.textContent = `${item.nome} - ${item.quantidade} unidades`;
+          lista.appendChild(li);
+        });
+      }
+    });
+
+    // Finalizar solicitação (salvar no banco)
+    document.getElementById("solicitarForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const solicitante = document.getElementById("solicitante").value.trim();
+      const departamento = document.getElementById("departamento").value.trim();
+      const itemSolicitado = document.getElementById("itemSolicitado").value.trim();
+      const quantidadeSolicitada = parseInt(document.getElementById("quantidadeSolicitada").value);
+
+      if (!solicitante || !departamento || !itemSolicitado || !quantidadeSolicitada) {
+        alert("Preencha todos os campos corretamente.");
+        return;
+      }
+
+      const novaSolicitacao = {
+        solicitante,
+        departamento,
+        item: itemSolicitado,
+        quantidade: quantidadeSolicitada,
+        data: new Date().toLocaleString()
+      };
+
+      solicitacoesRef.push(novaSolicitacao);
+
+      document.getElementById("solicitarForm").reset();
+      document.getElementById("mensagemSucesso").textContent = "Solicitação registrada com sucesso!";
+
+      setTimeout(() => {
+        document.getElementById("mensagemSucesso").textContent = "";
+      }, 4000);
+    });
+
+    // Listar solicitações registradas
+    solicitacoesRef.on("value", (snapshot) => {
+      const lista = document.getElementById("listaSolicitacoes");
+      lista.innerHTML = "";
+
+      snapshot.forEach((childSnapshot) => {
+        const s = childSnapshot.val();
+
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${s.solicitante}</strong> (${s.departamento}) - 
+          ${s.item} (${s.quantidade}) - ${s.data}
+        `;
+
+        lista.appendChild(li);
+      });
+    });
+  </script>
 </body>
 </html>
